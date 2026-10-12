@@ -1,0 +1,19 @@
+:root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+body { margin: 0; }
+.layout { display: grid; grid-template-columns: minmax(380px, 1fr) minmax(380px, 1fr); gap: 16px; padding: 16px; max-width: 1400px; margin: 0 auto; }
+header { grid-column: 1 / -1; }
+header h1 { margin: 0 0 4px; font-size: 1.3rem; }
+header p { margin: 0; opacity: .75; }
+.panel { border: 1px solid #8884; border-radius: 10px; padding: 12px 14px; min-width: 0; }
+.panel h2 { font-size: 1rem; margin: 12px 0 6px; }
+.toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+.toolbar button { padding: 6px 12px; cursor: pointer; }
+.muted { opacity: .65; font-size: .9rem; }
+.steps { list-style: none; padding: 0; margin: 0 0 8px; display: flex; flex-direction: column; gap: 4px; }
+.steps li { padding: 5px 8px; border-radius: 6px; cursor: pointer; border: 1px solid transparent; opacity: .55; }
+.steps li.sent { opacity: 1; }
+.steps li.sel { border-color: #4a8cff; background: #4a8cff22; }
+.explain { font-size: .92rem; line-height: 1.4; }
+pre { background: #8881; padding: 10px; border-radius: 8px; overflow: auto; font-size: .8rem; max-height: 340px; }
+pre.error { background: #ff000022; color: #c00; }
+.rendered { min-height: 160px; padding: 8px; border: 1px dashed #8886; border-radius: 8px; }
