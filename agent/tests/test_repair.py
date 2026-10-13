@@ -1,4 +1,7 @@
-"""Plain-assert tests for repair_surfaces (no pytest needed):  uv run python tests/test_repair.py"""
+"""Tests for repair_surfaces.  Run either way:
+    uv run --with pytest pytest
+    uv run python tests/test_repair.py
+"""
 import sys
 from pathlib import Path
 
@@ -28,31 +31,43 @@ def kinds(msgs):
     return [next(k for k in m if k != "version") for m in msgs]
 
 
-# 1. the reported bug: update for a surface the client never got -> createSurface inserted FIRST
-known: set[str] = set()
-out, notes = repair_surfaces([data("kpi"), comps("kpi")], known, CAT)
-assert kinds(out) == ["createSurface", "updateDataModel", "updateComponents"], kinds(out)
-assert out[0]["createSurface"] == {"surfaceId": "kpi", "catalogId": CAT}
-assert known == {"kpi"} and len(notes) == 1
+def test_update_for_unknown_surface_gets_createsurface_first():
+    # the reported bug: a retry dropped createSurface, so the browser had no such surface
+    known: set[str] = set()
+    out, notes = repair_surfaces([data("kpi"), comps("kpi")], known, CAT)
+    assert kinds(out) == ["createSurface", "updateDataModel", "updateComponents"]
+    assert out[0]["createSurface"] == {"surfaceId": "kpi", "catalogId": CAT}
+    assert known == {"kpi"} and len(notes) == 1
 
-# 2. well-formed output is left untouched
-known = set()
-good = [create("a"), comps("a"), data("a")]
-out, notes = repair_surfaces(good, known, CAT)
-assert out == good and notes == [] and known == {"a"}
 
-# 3. follow-up turn: createSurface for a surface already on screen is dropped; updates pass through
-out, notes = repair_surfaces([create("a"), comps("a")], known, CAT)
-assert kinds(out) == ["updateComponents"] and len(notes) == 1
+def test_well_formed_output_is_untouched():
+    known: set[str] = set()
+    good = [create("a"), comps("a"), data("a")]
+    out, notes = repair_surfaces(good, known, CAT)
+    assert out == good and notes == [] and known == {"a"}
 
-# 4. delete then re-create is allowed
-out, notes = repair_surfaces([delete("a"), create("a"), comps("a")], known, CAT)
-assert kinds(out) == ["deleteSurface", "createSurface", "updateComponents"] and notes == []
 
-# 5. several surfaces, each handled independently
-known = {"a"}
-out, notes = repair_surfaces([comps("a"), comps("b")], known, CAT)
-assert kinds(out) == ["updateComponents", "createSurface", "updateComponents"]
-assert known == {"a", "b"}
+def test_duplicate_createsurface_is_dropped_on_followup():
+    known = {"a"}
+    out, notes = repair_surfaces([create("a"), comps("a")], known, CAT)
+    assert kinds(out) == ["updateComponents"] and len(notes) == 1
 
-print("all repair_surfaces tests passed")
+
+def test_delete_then_recreate_is_allowed():
+    known = {"a"}
+    out, notes = repair_surfaces([delete("a"), create("a"), comps("a")], known, CAT)
+    assert kinds(out) == ["deleteSurface", "createSurface", "updateComponents"] and notes == []
+
+
+def test_surfaces_are_handled_independently():
+    known = {"a"}
+    out, _ = repair_surfaces([comps("a"), comps("b")], known, CAT)
+    assert kinds(out) == ["updateComponents", "createSurface", "updateComponents"]
+    assert known == {"a", "b"}
+
+
+if __name__ == "__main__":
+    tests = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
+    for t in tests:
+        t()
+    print(f"all {len(tests)} repair_surfaces tests passed")

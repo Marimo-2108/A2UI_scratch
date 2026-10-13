@@ -36,7 +36,7 @@ is the safety net between a probabilistic model and your UI. Example from the pr
 |---|---|---|
 | Protocol version | SDK + web lib validate `"version": "v0.9"`; passing `v0.9.1` to `create_processor` raises. Spec doc is ahead of the libraries. | Whole stack uses `v0.9`; extension URI `.../a2ui/v0.9` |
 | MIME type | SDK labels v0.9 parts `application/json+a2ui` (old name) | use SDK `create_a2ui_part`; web accepts both |
-| SDK on PyPI | `a2ui-agent-sdk` 0.8.0 on PyPI predates `A2uiGenerator`/`processor` that the docs describe | install **editable from the local clone** (`../../a2ui/python/...`). Coupled to that folder. |
+| SDK on PyPI | `a2ui-agent-sdk` 0.8.0 on PyPI predates `A2uiGenerator`/`processor` that the docs describe | install both packages from the public GitHub repo, **pinned to a commit** (git dependency in `agent/pyproject.toml`). Needs access to github.com; no local clone needed. |
 | TLS | `CERTIFICATE_VERIFY_FAILED: self-signed certificate in chain` for google domains only | `truststore` -> Python uses the OS cert store. Verification stays ON. |
 | Transient 503 | "model is currently experiencing high demand" (varies per model, per hour) | `HttpRetryOptions` backoff (429/5xx), and pick a model that is serving |
 | Latency | default ~43s, MEDIUM ~24s, **LOW ~5-12s**, same valid UI. `MINIMAL` is rejected by 3.8-flash. | `GEMINI_THINKING_LEVEL=LOW` default (`bench_thinking.py` reproduces the numbers) |

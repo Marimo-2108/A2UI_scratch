@@ -14,5 +14,5 @@ dependencies = [
 ]
 
 [tool.uv.sources]
-a2ui-core = { path = "../../a2ui/python/a2ui_core", editable = true }
-a2ui-agent-sdk = { path = "../../a2ui/python/a2ui_agent", editable = true }
+a2ui-core = { git = "https://github.com/a2ui-project/a2ui.git", subdirectory = "python/a2ui_core", rev = "ce03d005c0575ff6708da583d9e7658a34df2d5d" }
+a2ui-agent-sdk = { git = "https://github.com/a2ui-project/a2ui.git", subdirectory = "python/a2ui_agent", rev = "ce03d005c0575ff6708da583d9e7658a34df2d5d" }

@@ -66,6 +66,11 @@ if __name__ == "__main__":
         CAPS = load_caps()
         print("using exported custom catalog:", CAPS["v0.9"]["supportedCatalogIds"])
         args = args[1:]
+    elif args and args[0] == "--ids-only":
+        # advertise only a catalog NAME (no schema), e.g. to see what happens when the agent doesn't know it
+        CAPS = {"v0.9": {"supportedCatalogIds": [args[1]]}}
+        print("advertising catalog id only:", args[1])
+        args = args[2:]
     ctx, msgs = stream([{"kind": "text", "text": args[0]}])
     print("contextId:", ctx)
     if len(args) > 1:

@@ -56,8 +56,10 @@ RULES = """## How this conversation works
   `updateDataModel`; it is cheaper than resending components.
 - Every Button that should do something needs an `action.event` with a meaningful `name` and a
   `context` (context values may be {"path": "/..."} bindings so the user's input is included).
-- When the catalog has a purpose-built component that fits (for example `StatCard` for a single
-  metric / KPI), use it instead of assembling the same thing from Text and Column.
+- Use ONLY components that appear in the catalog schema below; never invent a component name.
+  If the catalog has a purpose-built component that clearly fits what the user asked for, use it
+  instead of assembling the same thing from basic parts. Otherwise stick to the basic components
+  (Text, Button, TextField, Column, Row, Card ...). A login form, for example, needs only those.
 - The first component of every `components` list MUST have id `root`.
 - EVERY reply MUST contain an A2UI JSON block, including the reply to a USER_ACTION. Never answer
   a click with text only: the user is looking at the screen, so update it to show the result

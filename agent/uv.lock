@@ -31,7 +31,8 @@ http-server = [
 
 [[package]]
 name = "a2ui-agent-sdk"
-source = { editable = "../../a2ui/python/a2ui_agent" }
+version = "0.8.1.dev22"
+source = { git = "https://github.com/a2ui-project/a2ui.git?subdirectory=python%2Fa2ui_agent&rev=ce03d005c0575ff6708da583d9e7658a34df2d5d#ce03d005c0575ff6708da583d9e7658a34df2d5d" }
 dependencies = [
     { name = "a2a-sdk" },
     { name = "a2ui-core" },
@@ -45,30 +46,10 @@ dependencies = [
     { name = "pyyaml" },
 ]
 
-[package.metadata]
-requires-dist = [
-    { name = "a2a-sdk", specifier = ">=0.3.0,<0.4.0" },
-    { name = "a2ui-core", editable = "../../a2ui/python/a2ui_core" },
-    { name = "antlr4-python3-runtime", specifier = ">=4.13.0,<4.14.0" },
-    { name = "google-adk", specifier = ">=1.28.1" },
-    { name = "google-genai", specifier = ">=1.27.0" },
-    { name = "httpx", specifier = ">=0.27.0" },
-    { name = "jsonschema", specifier = ">=4.0.0" },
-    { name = "nest-asyncio", specifier = ">=1.6.0" },
-    { name = "pydantic", specifier = ">=2.11.0" },
-    { name = "pyyaml", specifier = ">=6.0" },
-]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "antlr4-tools", specifier = ">=0.2.1" },
-    { name = "types-jsonschema" },
-    { name = "types-pyyaml" },
-]
-
 [[package]]
 name = "a2ui-core"
-source = { editable = "../../a2ui/python/a2ui_core" }
+version = "0.3.1.dev22"
+source = { git = "https://github.com/a2ui-project/a2ui.git?subdirectory=python%2Fa2ui_core&rev=ce03d005c0575ff6708da583d9e7658a34df2d5d#ce03d005c0575ff6708da583d9e7658a34df2d5d" }
 dependencies = [
     { name = "babel" },
     { name = "jsonschema" },
@@ -76,18 +57,6 @@ dependencies = [
     { name = "referencing" },
     { name = "regex" },
 ]
-
-[package.metadata]
-requires-dist = [
-    { name = "babel", specifier = ">=2.14.0" },
-    { name = "jsonschema", specifier = ">=4.26.0" },
-    { name = "pydantic", specifier = ">=2.10.0" },
-    { name = "referencing", specifier = ">=0.37.0" },
-    { name = "regex", specifier = ">=2024.11.6" },
-]
-
-[package.metadata.requires-dev]
-dev = [{ name = "pyyaml", specifier = ">=6.0.3" }]
 
 [[package]]
 name = "a2ui-scratch-agent"
@@ -107,8 +76,8 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "a2a-sdk", extras = ["http-server"], specifier = ">=0.3.0,<0.4.0" },
-    { name = "a2ui-agent-sdk", editable = "../../a2ui/python/a2ui_agent" },
-    { name = "a2ui-core", editable = "../../a2ui/python/a2ui_core" },
+    { name = "a2ui-agent-sdk", git = "https://github.com/a2ui-project/a2ui.git?subdirectory=python%2Fa2ui_agent&rev=ce03d005c0575ff6708da583d9e7658a34df2d5d" },
+    { name = "a2ui-core", git = "https://github.com/a2ui-project/a2ui.git?subdirectory=python%2Fa2ui_core&rev=ce03d005c0575ff6708da583d9e7658a34df2d5d" },
     { name = "google-genai", specifier = ">=2.30.0" },
     { name = "openai", specifier = ">=3.29.0" },
     { name = "python-dotenv", specifier = ">=1.2.4" },
