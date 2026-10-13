@@ -33,7 +33,10 @@ export const wire: WireStep[] = [
       'Creates an empty surface bound to a catalog. Nothing is visible yet: there is no root component.',
     message: {
       version: 'v0.9.1',
-      createSurface: { surfaceId: SURFACE_ID, catalogId: BASIC_CATALOG_ID },
+      createSurface: { 
+        surfaceId: SURFACE_ID, 
+        catalogId: BASIC_CATALOG_ID 
+      },
     },
   },
   {

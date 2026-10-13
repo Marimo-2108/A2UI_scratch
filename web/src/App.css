@@ -17,3 +17,7 @@ header p { margin: 0; opacity: .75; }
 pre { background: #8881; padding: 10px; border-radius: 8px; overflow: auto; font-size: .8rem; max-height: 340px; }
 pre.error { background: #ff000022; color: #c00; }
 .rendered { min-height: 160px; padding: 8px; border: 1px dashed #8886; border-radius: 8px; }
+
+.tabs { display: flex; gap: 8px; align-items: center; padding: 10px 16px; border-bottom: 1px solid #8884; }
+.tabs button { padding: 6px 12px; cursor: pointer; border: 1px solid #8886; border-radius: 6px; background: transparent; color: inherit; }
+.tabs button.on { background: #4a8cff33; border-color: #4a8cff; }
