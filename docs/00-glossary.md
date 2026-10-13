@@ -39,3 +39,17 @@ A2UI is the order slip format they pass back and forth.
 | **JSON-RPC** | A simple request style: `{ "method": "...", "params": {...} }`. A2A uses it. |
 | **CORS / preflight** | Browser safety rule: a page may only call another address if that address allows it. The agent has to say yes. |
 | **MIME type** | A label on data saying what it is. Ours: `application/a2ui+json` = "this is A2UI". |
+
+## Added in Milestone 4 (the AI part)
+| Term | Plain meaning |
+|---|---|
+| **LLM** | The AI model (Gemini). It writes text; we make it write A2UI JSON. |
+| **System prompt** | Standing instructions given to the model before the user's message. Ours = role + rules + the A2UI schema. |
+| **prompt_snippet** | The SDK's ready-made chunk of system prompt that teaches the model the A2UI format. |
+| **Validation** | Checking the model's JSON against the catalog schema before the user ever sees it. |
+| **Retry loop** | If validation fails, send the error back to the model and ask it to fix its answer. |
+| **Memory / history** | The earlier turns of the conversation, sent along each time, so "what is on screen" is known. Kept per `contextId`. |
+| **Thinking level** | How long the model reasons before answering. Lower = faster. LOW is ~5-12s here, default ~43s, same result. |
+| **Token** | A chunk of text the model reads or writes (~4 characters). Cost and speed scale with tokens. |
+| **503 / 429** | Server busy / too many requests. Temporary; we retry with backoff. |
+| **truststore / certificate store** | Makes Python trust the same HTTPS certificates as Windows. Needed on networks that re-sign traffic. |

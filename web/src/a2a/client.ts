@@ -10,7 +10,7 @@
 export const AGENT_URL = import.meta.env.VITE_AGENT_URL ?? 'http://localhost:10010/';
 
 /** The A2UI extension URI the client opts in to (the version is part of the URI). */
-export const A2UI_EXTENSION_URI = 'https://a2ui.org/a2a-extension/a2ui/v0.9.1';
+export const A2UI_EXTENSION_URI = 'https://a2ui.org/a2a-extension/a2ui/v0.9';
 export const A2UI_MIME_TYPES = ['application/a2ui+json', 'application/json+a2ui'];
 
 export type A2APart =
@@ -124,3 +124,4 @@ export function textOf(ev: A2AEvent): string[] {
     ev.kind === 'status-update' || ev.kind === 'task' ? ev.status.message?.parts : ev.kind === 'message' ? ev.parts : undefined;
   return (parts ?? []).filter((p) => p.kind === 'text').map((p) => (p as { text: string }).text);
 }
+

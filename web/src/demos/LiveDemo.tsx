@@ -21,7 +21,7 @@ interface TraceRow {
   raw: unknown;
 }
 
-const PROTOCOL_VERSION = 'v0.9.1';
+const PROTOCOL_VERSION = 'v0.9';
 
 /**
  * Client -> agent: a user action travels as a DataPart with the same MIME type.
@@ -101,6 +101,14 @@ export default function LiveDemo() {
         push('in', describe(ev), ev);
         textOf(ev).forEach((t) => setChat((c) => [...c, t]));
         for (const msg of a2uiMessagesOf(ev)) {
+          // The spec says createSurface for an existing surfaceId is an error. An LLM (or an agent
+          // that restarted and forgot the screen) may do it anyway. Ignore the duplicate and
+          // still apply the updateComponents / updateDataModel that follow: the surface stays.
+          const dup = (msg as { createSurface?: { surfaceId: string } }).createSurface;
+          if (dup && p.getSurface(dup.surfaceId)) {
+            push('in', `ignored duplicate createSurface "${dup.surfaceId}" (already on screen)`, msg);
+            continue;
+          }
           try {
             p.processMessages(msg as never);
           } catch (e) {
@@ -116,14 +124,21 @@ export default function LiveDemo() {
     }
   };
 
-  /** "Send to agent": starts over with a brand-new processor (so surfaces are recreated). */
+  /** "Send to agent": a NEW conversation: new processor (empty screen) and no contextId (empty memory). */
   const send = () => {
     setErrors([]);
     setChat([]);
+    contextId.current = undefined;
     const p = makeProcessor();
     setProcessor(p);
     void run(p, [{ kind: 'text', text: prompt }]);
   };
+  /** "Follow-up": same conversation and same screen; the agent must update what is already there. */
+  const followUp = () => {
+    setErrors([]);
+    void run(processor, [{ kind: 'text', text: prompt }]);
+  };
+
   void tick;
 
   const surfaces = Array.from(processor.model.surfacesMap.values());
@@ -147,7 +162,10 @@ export default function LiveDemo() {
             onKeyDown={(e) => e.key === 'Enter' && !busy && send()}
           />
           <button onClick={send} disabled={busy}>
-            {busy ? 'Streaming…' : 'Send to agent ▶'}
+            {busy ? 'Working…' : 'New conversation ▶'}
+          </button>
+          <button onClick={followUp} disabled={busy || !contextId.current}>
+            Follow-up
           </button>
           <button onClick={() => { setTrace([]); setSelected(null); }}>Clear trace</button>
         </div>
@@ -185,3 +203,5 @@ export default function LiveDemo() {
     </div>
   );
 }
+
+
