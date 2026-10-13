@@ -12,7 +12,7 @@ from a2a.types import DataPart, TaskState
 from a2a.utils import new_agent_parts_message, new_agent_text_message, new_task
 
 from a2ui_ext import a2ui_part, a2ui_requested, choose_catalog
-from script import welcome_card
+from script import greeting_update, welcome_card
 
 log = logging.getLogger("executor")
 
@@ -69,18 +69,26 @@ class ScriptedExecutor(AgentExecutor):
             )
             return
 
-        # --- 4. actions come back as DataParts (Milestone 3 will act on them) -------------
+        # --- 4. an ACTION: the user clicked something in the UI ---------------------------
+        # It arrives as a DataPart: { "version": ..., "action": { name, surfaceId, context, ... } }
         if action is not None:
+            act = action["action"]
+            log.info("ACTION %s from %s, context=%s", act.get("name"), act.get("sourceComponentId"), act.get("context"))
+            if act.get("name") == "submit_name":
+                name = str((act.get("context") or {}).get("name", ""))
+                for a2ui_msg in greeting_update(act["surfaceId"], name):
+                    await updater.update_status(
+                        TaskState.working,
+                        new_agent_parts_message([a2ui_part(a2ui_msg)], task.context_id, task.id),
+                    )
+                reply = "Updated the greeting."
+            else:
+                reply = f"Unknown action {act.get('name')!r}."
             await updater.update_status(
                 TaskState.input_required,
-                new_agent_text_message(
-                    f"Got action {action['action'].get('name')!r}; handling actions comes in Milestone 3.",
-                    task.context_id,
-                    task.id,
-                ),
+                new_agent_text_message(reply, task.context_id, task.id),
             )
             return
-
         # --- 5. stream the UI: one status-update per A2UI message ----------------------------
         await updater.update_status(
             TaskState.working,

@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { MessageProcessor } from '@a2ui/web_core/v0_9';
 import { basicCatalog } from '@a2ui/web_core/v0_9/basic_catalog';
 import { A2uiSurface, type ReactCatalogComponent } from '@a2ui/react/v0_9';
+import type { ActionPayload } from '@a2ui/web_core/v0_9';
 import {
   AGENT_URL,
   A2UI_EXTENSION_URI,
@@ -9,6 +10,7 @@ import {
   streamMessage,
   textOf,
   type A2AEvent,
+  type A2APart,
 } from '../a2a/client';
 
 interface TraceRow {
@@ -21,6 +23,26 @@ interface TraceRow {
 
 const PROTOCOL_VERSION = 'v0.9.1';
 
+/**
+ * Client -> agent: a user action travels as a DataPart with the same MIME type.
+ * Shape (spec, client_to_server): { version, action: { name, surfaceId, sourceComponentId, timestamp, context } }
+ */
+function actionPart(a: ActionPayload): A2APart {
+  return {
+    kind: 'data',
+    data: {
+      version: PROTOCOL_VERSION,
+      action: {
+        name: a.name,
+        surfaceId: a.surfaceId,
+        sourceComponentId: a.sourceComponentId,
+        timestamp: a.timestamp,
+        context: a.context,
+      },
+    },
+    metadata: { mimeType: 'application/a2ui+json' },
+  };
+}
 function describe(ev: A2AEvent): string {
   switch (ev.kind) {
     case 'task':
@@ -47,36 +69,39 @@ export default function LiveDemo() {
   const contextId = useRef<string | undefined>(undefined);
   const seq = useRef(0);
 
-  // Milestone 1's MessageProcessor, unchanged. The second argument is the action handler.
-  const makeProcessor = () =>
-    new MessageProcessor<ReactCatalogComponent>([basicCatalog], (action) => {
-      // Milestone 3 sends this to the agent. For now we just show that it left the client.
-      push('out', `action  (not sent yet)`, action);
-    });
+  // The MessageProcessor from Milestone 1. Its 2nd argument is the ACTION HANDLER: the library
+  // calls it when the user clicks a Button whose component has an `action.event`.
+  // Milestone 3: instead of only logging, we now send the action to the agent.
+  const makeProcessor = () => {
+    const p: MessageProcessor<ReactCatalogComponent> = new MessageProcessor<ReactCatalogComponent>(
+      [basicCatalog],
+      (action) => {
+        push('out', 'action ' + action.name + ' (clicked in UI)', action);
+        void run(p, [actionPart(action)]);
+      },
+    );
+    return p;
+  };
   const [processor, setProcessor] = useState(makeProcessor);
   const push = (dir: TraceRow['dir'], label: string, raw: unknown) =>
     setTrace((t) => [...t, { n: ++seq.current, at: new Date().toLocaleTimeString(), dir, label, raw }]);
 
-  const send = async () => {
+  /** Send parts to the agent and feed every A2UI message of the reply into processor `p`. */
+  const run = async (p: MessageProcessor<ReactCatalogComponent>, parts: A2APart[]) => {
     setBusy(true);
-    setErrors([]);
-    setChat([]);
-    const p = makeProcessor(); // fresh MessageProcessor => fresh surfaces
-    setProcessor(p);
     try {
       for await (const ev of streamMessage({
-        parts: [{ kind: 'text', text: prompt }],
-        contextId: contextId.current,
+        parts,
+        contextId: contextId.current, // same conversation as before
         // a2uiClientCapabilities: tells the agent which catalogs our renderer can draw.
         capabilities: { [PROTOCOL_VERSION]: { supportedCatalogIds: [basicCatalog.id] } },
-        onRequest: (r) => push('out', `POST message/stream (X-A2A-Extensions: …${PROTOCOL_VERSION})`, r),
+        onRequest: (r) => push('out', 'POST message/stream', r),
       })) {
         contextId.current = 'contextId' in ev ? ev.contextId : contextId.current;
         push('in', describe(ev), ev);
         textOf(ev).forEach((t) => setChat((c) => [...c, t]));
         for (const msg of a2uiMessagesOf(ev)) {
           try {
-            // The A2UI payload goes straight into the same MessageProcessor as Milestone 1.
             p.processMessages(msg as never);
           } catch (e) {
             setErrors((x) => [...x, e instanceof Error ? e.message : String(e)]);
@@ -91,6 +116,14 @@ export default function LiveDemo() {
     }
   };
 
+  /** "Send to agent": starts over with a brand-new processor (so surfaces are recreated). */
+  const send = () => {
+    setErrors([]);
+    setChat([]);
+    const p = makeProcessor();
+    setProcessor(p);
+    void run(p, [{ kind: 'text', text: prompt }]);
+  };
   void tick;
 
   const surfaces = Array.from(processor.model.surfacesMap.values());

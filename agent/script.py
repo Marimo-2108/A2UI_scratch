@@ -62,3 +62,17 @@ def welcome_card(catalog_id: str) -> list[dict[str, Any]]:
             },
         },
     ]
+
+
+def greeting_update(surface_id: str, name: str) -> list[dict[str, Any]]:
+    """Reply to the `submit_name` action: change ONE value in the data model.
+
+    No components are re-sent. The Text component bound to /greeting redraws on its own.
+    """
+    greeting = f"Nice to meet you, {name}!" if name.strip() else "You didn't type a name."
+    return [
+        {
+            "version": PROTOCOL_VERSION,
+            "updateDataModel": {"surfaceId": surface_id, "path": "/greeting", "value": greeting},
+        }
+    ]
