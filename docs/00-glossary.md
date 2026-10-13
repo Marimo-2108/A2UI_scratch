@@ -53,3 +53,16 @@ A2UI is the order slip format they pass back and forth.
 | **Token** | A chunk of text the model reads or writes (~4 characters). Cost and speed scale with tokens. |
 | **503 / 429** | Server busy / too many requests. Temporary; we retry with backoff. |
 | **truststore / certificate store** | Makes Python trust the same HTTPS certificates as Windows. Needed on networks that re-sign traffic. |
+
+## Added in Milestone 5 (custom components)
+| Term | Plain meaning |
+|---|---|
+| **Custom component** | A UI piece you invent (StatCard) and add to your catalog. The agent can then request it by name. |
+| **Component API vs implementation** | API = the name and the allowed properties (a schema, just data). Implementation = how it looks (React code). Only the API is shared with the agent. |
+| **Zod** | A TypeScript library for describing the shape of data. We use it to describe StatCard's properties. |
+| **JSON Schema** | The language-neutral way to describe data shapes. The agent side reads this. Zod can be exported to it. |
+| **Inline catalog** | The client sends its whole catalog (as JSON Schema) inside its capabilities, so the agent learns custom components without keeping its own copy. |
+| **catalogId** | A name for a catalog. Both sides must agree on it exactly. Our custom one is `.../stats-v1.json`. |
+| **Enum** | A property that may only be one of a fixed list (trend: up, down, flat). Validation rejects anything else. |
+| **Lossy export** | Converting between schema formats can drop detail (very nested function calls become "anything"). |
+| **Content filter / gateway** | A network security layer that can block sites. Cloudflare Gateway blocked api.openai.com here, returning an HTML "blocked" page instead of the API's answer. |

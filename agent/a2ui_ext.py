@@ -34,7 +34,11 @@ def agent_extension() -> AgentExtension:
         uri=EXTENSION_URI,
         description="Provides agent driven UI using the A2UI JSON format.",
         required=False,
-        params={"supportedCatalogIds": SUPPORTED_CATALOG_IDS},
+        params={
+            "supportedCatalogIds": SUPPORTED_CATALOG_IDS,
+            # we can use a catalog the client sends inline (see ui_brain.py)
+            "acceptsInlineCatalogs": True,
+        },
     )
 
 

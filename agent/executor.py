@@ -73,14 +73,19 @@ class UiExecutor(AgentExecutor):
                 final=True,
             )
             return
-        catalog_id = choose_catalog(context)
-        if catalog_id is None:
-            await say(
-                "No shared A2UI catalog. Send metadata.a2uiClientCapabilities.",
-                TaskState.failed,
-                final=True,
-            )
-            return
+        # Catalog negotiation. Scripted mode only knows the basic catalog, so our hand-written
+        # check is enough. In LLM mode the SDK negotiates (it may even accept the client's
+        # INLINE catalog), so we leave that to UiBrain: it fails the task if nothing matches.
+        catalog_id = None
+        if self.brain is None:
+            catalog_id = choose_catalog(context)
+            if catalog_id is None:
+                await say(
+                    "No shared A2UI catalog. Send metadata.a2uiClientCapabilities.",
+                    TaskState.failed,
+                    final=True,
+                )
+                return
 
         # --- 4. the brain ------------------------------------------------------------------
         try:

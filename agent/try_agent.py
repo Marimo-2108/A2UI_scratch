@@ -10,9 +10,22 @@ import uuid
 
 import httpx
 
-URL = "http://localhost:10010/"
+import os
+
+URL = os.getenv("AGENT_URL", "http://localhost:10010/")  # override to test another instance
 EXT = "https://a2ui.org/a2a-extension/a2ui/v0.9"
 CATALOG = "https://a2ui.org/specification/v0_9/catalogs/basic/catalog.json"
+
+
+BASIC_CAPS = {"v0.9": {"supportedCatalogIds": [CATALOG]}}
+
+
+def load_caps():
+    """Capabilities exported from the web app (our custom catalog inline). `npm run export:caps`."""
+    return json.load(open("fixtures/inline_caps.json", encoding="utf-8"))
+
+
+CAPS = BASIC_CAPS  # replaced by main when --caps is passed
 
 
 def stream(parts, context_id=None):
@@ -21,7 +34,7 @@ def stream(parts, context_id=None):
         "messageId": str(uuid.uuid4()),
         "role": "user",
         "parts": parts,
-        "metadata": {"a2uiClientCapabilities": {"v0.9": {"supportedCatalogIds": [CATALOG]}}},
+        "metadata": {"a2uiClientCapabilities": CAPS},
     }
     if context_id:
         msg["contextId"] = context_id
@@ -47,8 +60,14 @@ def stream(parts, context_id=None):
 
 
 if __name__ == "__main__":
-    ctx, msgs = stream([{"kind": "text", "text": sys.argv[1]}])
+    # usage: try_agent.py [--caps] "prompt" [save_to.json]
+    args = sys.argv[1:]
+    if args and args[0] == "--caps":
+        CAPS = load_caps()
+        print("using exported custom catalog:", CAPS["v0.9"]["supportedCatalogIds"])
+        args = args[1:]
+    ctx, msgs = stream([{"kind": "text", "text": args[0]}])
     print("contextId:", ctx)
-    if len(sys.argv) > 2:
-        json.dump(msgs, open(sys.argv[2], "w"), indent=2)
-        print("saved", sys.argv[2])
+    if len(args) > 1:
+        json.dump(msgs, open(args[1], "w"), indent=2)
+        print("saved", args[1])

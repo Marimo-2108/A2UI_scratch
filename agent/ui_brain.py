@@ -56,6 +56,8 @@ RULES = """## How this conversation works
   `updateDataModel`; it is cheaper than resending components.
 - Every Button that should do something needs an `action.event` with a meaningful `name` and a
   `context` (context values may be {"path": "/..."} bindings so the user's input is included).
+- When the catalog has a purpose-built component that fits (for example `StatCard` for a single
+  metric / KPI), use it instead of assembling the same thing from Text and Column.
 - The first component of every `components` list MUST have id `root`.
 - EVERY reply MUST contain an A2UI JSON block, including the reply to a USER_ACTION. Never answer
   a click with text only: the user is looking at the screen, so update it to show the result
@@ -67,9 +69,17 @@ class UiBrain:
         self.settings = settings
         self.llm = make_llm(settings)  # Gemini or OpenAI, chosen by LLM_PROVIDER
         # The generator holds the catalogs THIS AGENT can produce UI for.
-        self.generator = A2uiGenerator([CatalogConfig(BasicCatalog(VERSION_0_9))])
+        # accepts_inline_catalogs=True: a client may send its OWN catalog (JSON Schema) inside
+        # a2uiClientCapabilities. We then prompt and validate against that, so custom components
+        # defined in the browser work without a copy on the server. The basic catalog stays as
+        # the fallback for clients that only send supportedCatalogIds.
+        self.generator = A2uiGenerator(
+            [CatalogConfig(BasicCatalog(VERSION_0_9))], accepts_inline_catalogs=True
+        )
         # contextId -> conversation so far (in RAM; restart = forgotten).
         self.histories: dict[str, list[Msg]] = {}
+        # contextId -> surfaceIds we have DELIVERED to that client (not merely generated).
+        self.surfaces: dict[str, set[str]] = {}
 
     def system_prompt(self, processor: Any) -> str:
         return "\n\n".join([ROLE, RULES, processor.prompt_snippet])
@@ -103,19 +113,79 @@ class UiBrain:
                     Msg(
                         "user",
                         "Your previous A2UI JSON failed validation:\n"
-                        f"{e}\n\nFix it and send the complete A2UI JSON block again.",
+                        f"{e}\n\n"
+                        "IMPORTANT: that attempt was rejected and NOTHING from it reached the user's "
+                        "screen. Send the COMPLETE A2UI JSON block again from scratch, including "
+                        "`createSurface` for any new surface. Do not mention this error or the fix "
+                        "in your text reply; just write the normal one-sentence reply.",
                     ),
                 ]
                 continue
 
             history += [*turn, Msg("model", text)]  # success: remember it
+
+            # Flatten to wire messages, then reconcile with what the client really has on screen.
+            known = self.surfaces.setdefault(context_id, set())
+            catalog_id = processor.active_catalogs[0].catalog_id
+            texts: list[str] = []
+            wire: list[dict[str, Any]] = []
             for part in parts:
-                if isinstance(part, ParsedText) and part.text.strip():
-                    yield Part(root=TextPart(text=part.text.strip()))
-                elif isinstance(part, A2uiPart):
-                    for msg in to_message_dicts(part.a2ui):
-                        yield a2ui_part(msg)
+                if isinstance(part, A2uiPart):
+                    wire += to_message_dicts(part.a2ui)
+                elif isinstance(part, ParsedText) and part.text.strip():
+                    texts.append(part.text.strip())
+            wire, notes = repair_surfaces(wire, known, catalog_id)
+            for n in notes:
+                log.warning("repaired model output: %s", n)
+
+            for t in texts:
+                yield Part(root=TextPart(text=t))
+            for msg in wire:
+                yield a2ui_part(msg)
             return
+
+
+def repair_surfaces(
+    messages: list[dict[str, Any]], known: set[str], catalog_id: str
+) -> tuple[list[dict[str, Any]], list[str]]:
+    """Make a batch of A2UI messages consistent with what the client ACTUALLY has on screen.
+
+    `known` = surfaceIds already delivered to this client (updated in place). Rules, in order:
+      - updateComponents / updateDataModel for an unknown surface -> insert the missing createSurface
+        (the model assumed an earlier attempt, which never reached the client, had created it)
+      - createSurface for a surface the client already has        -> drop it (spec: that's an error)
+      - deleteSurface                                             -> forget the surface
+    Returns (fixed messages, human-readable notes about what was repaired).
+    """
+    out: list[dict[str, Any]] = []
+    notes: list[str] = []
+    for m in messages:
+        kind = next((k for k in m if k != "version"), "")
+        body = m.get(kind)
+        sid = body.get("surfaceId") if isinstance(body, dict) else None
+        if sid is None:
+            out.append(m)
+        elif kind == "createSurface":
+            if sid in known:
+                notes.append(f"dropped duplicate createSurface for {sid!r}")
+                continue
+            known.add(sid)
+            out.append(m)
+        elif kind == "deleteSurface":
+            known.discard(sid)
+            out.append(m)
+        else:  # updateComponents / updateDataModel / anything addressed to a surface
+            if sid not in known:
+                notes.append(f"inserted missing createSurface for {sid!r}")
+                out.append(
+                    {
+                        "version": m.get("version", "v0.9"),
+                        "createSurface": {"surfaceId": sid, "catalogId": catalog_id},
+                    }
+                )
+                known.add(sid)
+            out.append(m)
+    return out, notes
 
 
 def action_to_text(action: dict[str, Any]) -> str:
