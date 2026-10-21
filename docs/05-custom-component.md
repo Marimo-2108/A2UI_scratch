@@ -24,7 +24,7 @@ with property values the schema allows. It cannot ship code.
                                     `processor.getRendererCapabilities({versions, includeInlineCatalogs:true})`
 - `agent`: `A2uiGenerator(..., accepts_inline_catalogs=True)`; agent card says `acceptsInlineCatalogs: true`
 - `web/scripts/export-capabilities.mjs` + `npm run export:caps` -> `agent/fixtures/inline_caps.json`
-- `agent/try_agent.py --caps "prompt"` sends that catalog from the command line
+- `agent/tests/manual/try_agent.py --caps "prompt"` sends that catalog from the command line
 
 ## Results (same prompt: "a small KPI dashboard: revenue, active users, churn")
 | Client sends | catalogId chosen by the model | Result |
@@ -51,7 +51,7 @@ unknown component `Banana` is REJECTED; a correct StatCard is accepted.
 ## Try it
 ```
 cd web && npm run export:caps
-cd ../agent && uv run python try_agent.py --caps "a KPI dashboard for an online shop"
+cd ../agent && uv run python tests/manual/try_agent.py --caps "a KPI dashboard for an online shop"
 ```
 In the browser: tab "M2 · Live agent" -> "a KPI dashboard for an online shop" -> New conversation.
 Then Follow-up: "add a fourth card for conversion rate", "make churn trend up".
@@ -64,10 +64,10 @@ Ideas to extend: add a `size` enum, an `icon` property, or an `action` so a card
 enum. Validation rejected attempts 1 and 2 (good). On attempt 3 the model returned a SHORTER answer
 WITHOUT `createSurface`: the failed attempts were in its conversation, so it assumed the surface already
 existed. But rejected attempts never reach the client, so the browser had no such surface.
-Reproduced with `repro_kpi.py`: 2 of 4 runs broken, every broken run had 2 validation retries.
+Reproduced with `tests/manual/repro_kpi.py`: 2 of 4 runs broken, every broken run had 2 validation retries.
 
 **Fixes (three layers):**
-1. `repair_surfaces()` in `ui_brain.py`: the agent remembers which surfaces it has actually DELIVERED
+1. `repair_surfaces()` (now `a2ui_ext/_surfaces.py`): the agent remembers which surfaces it has actually DELIVERED
    per conversation; an update for an unknown surface gets the missing `createSurface` inserted
    (with the negotiated catalog id); a duplicate `createSurface` is dropped; `deleteSurface` forgets.
    Unit-tested in `tests/test_repair.py` (`uv run python tests/test_repair.py`).
@@ -82,4 +82,4 @@ path itself wasn't triggered in that run, the unit tests cover it.
 - Validate-and-retry creates a hidden state problem: what the model *believes* happened (its
   conversation) can differ from what the client *has*. The agent must track delivered state itself.
 - Schema descriptions are prompt text. Tell the model what a property can NOT be, not only what it is.
-- `repro_kpi.py [N]` runs the prompt N times and checks that every updated surface was created first.
+- `tests/manual/repro_kpi.py [N]` runs the prompt N times and checks that every updated surface was created first.

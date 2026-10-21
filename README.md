@@ -2,7 +2,7 @@
 
 A learning/prototyping project for [A2UI](https://a2ui.org) (agent-to-UI). An AI agent streams declarative UI over the A2A protocol, and a React app renders it with a custom component catalog.
 
-- `agent/` – Python A2A server. Runs in `scripted` mode (fixed UI, no key needed) or `llm` mode (Gemini or OpenAI decides the UI).
+- `agent/` – Python A2A server (package `a2ui_agent_app`, see `agent/README.md`). Runs in `scripted` mode (fixed UI, no key needed) or `llm` mode (a Google ADK agent on Gemini or OpenAI decides the UI).
 - `web/` – React + Vite client using `@a2ui/react`, with demos and a custom catalog.
 - `docs/` – Step-by-step notes (wire format, A2A transport, actions, Gemini, custom components, catalog scaling).
 
@@ -12,7 +12,7 @@ Only [Docker](https://www.docker.com/) and VS Code/Cursor with the Dev Container
 
 1. Open this folder and run **Dev Containers: Reopen in Container**. First build installs everything (`.devcontainer/post-create.sh`) and creates `agent/.env` from the example.
 2. Edit `agent/.env` (`AGENT_MODE=scripted` needs no key).
-3. In two terminals: `cd agent && uv run python server.py` and `cd web && npm run dev`.
+3. In two terminals: `cd agent && uv run a2ui-agent` and `cd web && npm run dev`.
 4. Open http://localhost:5173 (ports 10010 and 5173 are forwarded automatically).
 
 The container keeps `.venv` and `node_modules` in Docker volumes, so a host-side Windows install won't conflict.
@@ -31,7 +31,7 @@ The container keeps `.venv` and `node_modules` in Docker volumes, so a host-side
 cd agent
 copy .env.example .env     # macOS/Linux: cp .env.example .env
 uv sync
-uv run python server.py    # listens on http://localhost:10010
+uv run a2ui-agent         # listens on http://localhost:10010
 ```
 
 In `.env`, set `AGENT_MODE=scripted` to try it without an API key, or `AGENT_MODE=llm` with `GEMINI_API_KEY` (or `OPENAI_API_KEY` and `LLM_PROVIDER=openai`). Never commit `.env`.
@@ -39,7 +39,7 @@ In `.env`, set `AGENT_MODE=scripted` to try it without an API key, or `AGENT_MOD
 Quick check without a browser:
 
 ```
-uv run python try_agent.py "a small signup form"
+uv run python tests/manual/try_agent.py "a small signup form"
 ```
 
 ### 2. Web
@@ -58,7 +58,7 @@ If you change the custom catalog, regenerate the capabilities fixture the agent 
 
 ```
 cd agent
-uv run --with pytest pytest
+uv run pytest
 ```
 
 See `docs/` for how it all works, starting with `00-glossary.md`.

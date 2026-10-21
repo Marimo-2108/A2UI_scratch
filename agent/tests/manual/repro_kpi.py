@@ -1,6 +1,6 @@
 """Repro helper: send the KPI prompt N times, report whether every surface that gets updated was created.
 
-    set AGENT_URL=http://localhost:10011/   (optional)   uv run python repro_kpi.py [N]
+    set AGENT_URL=http://localhost:10011/   (optional)   uv run python tests/manual/repro_kpi.py [N]
 """
 import sys
 

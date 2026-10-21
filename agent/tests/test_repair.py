@@ -1,12 +1,8 @@
 """Tests for repair_surfaces.  Run either way:
-    uv run --with pytest pytest
+    uv run pytest
     uv run python tests/test_repair.py
 """
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from ui_brain import repair_surfaces  # noqa: E402
+from a2ui_agent_app.a2ui_ext import repair_surfaces
 
 CAT = "cat://x"
 

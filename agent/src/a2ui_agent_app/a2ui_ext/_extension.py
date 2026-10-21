@@ -7,8 +7,6 @@ comes from the official SDK).
   4. building an A2A DataPart that carries ONE A2UI message
 """
 
-from __future__ import annotations
-
 import logging
 from typing import Any
 
@@ -36,7 +34,7 @@ def agent_extension() -> AgentExtension:
         required=False,
         params={
             "supportedCatalogIds": SUPPORTED_CATALOG_IDS,
-            # we can use a catalog the client sends inline (see ui_brain.py)
+            # we can use a catalog the client sends inline (see server/_ui_brain.py)
             "acceptsInlineCatalogs": True,
         },
     )

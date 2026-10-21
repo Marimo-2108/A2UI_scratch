@@ -4,8 +4,8 @@
 ```
 cd agent
 copy .env.example .env      # then set GEMINI_API_KEY (never commit .env)
-uv run python server.py     # AGENT_MODE=gemini in .env; set AGENT_MODE=scripted for the fixed UI
-uv run python try_agent.py "a small signup form"   # poke it without a browser
+uv run a2ui-agent           # AGENT_MODE=llm in .env; set AGENT_MODE=scripted for the fixed UI
+uv run python tests/manual/try_agent.py "a small signup form"   # poke it without a browser
 ```
 Web: tab "M2 · Live agent" -> **New conversation** (fresh screen + memory) or **Follow-up**
 (same conversation, same screen).
@@ -49,6 +49,7 @@ is the safety net between a probabilistic model and your UI. Example from the pr
 - Message order was `createSurface, updateDataModel, updateComponents`; the client doesn't mind.
 
 ## Files
+(Original Milestone 4 layout; see "Addendum: Google ADK" below for where these live now.)
 - `agent/config.py`        all settings from env / `.env` (+ truststore)
 - `agent/gemini_brain.py`  prompt, Gemini call, validate + retry loop, per-context memory
 - `agent/executor.py`      one flow for both brains; negotiation -> brain -> status-updates
@@ -68,7 +69,7 @@ is the safety net between a probabilistic model and your UI. Example from the pr
 Lesson: A2UI is a *format*. Prompt building, validation, retry and the client never changed.
 
 OpenAI setup: add `OPENAI_API_KEY` and `OPENAI_MODEL` to `agent/.env`;
-`uv run python list_models.py openai` shows what your key can use. Reasoning models take
+`uv run python tests/manual/list_models.py openai` shows what your key can use. Reasoning models take
 `OPENAI_REASONING_EFFORT` (and reject a custom temperature, so we send one or the other).
 
 ### Reliability lessons (same day)
@@ -104,3 +105,29 @@ message ("multiple conflicting update actions"). The validate-and-retry loop cau
 3rd attempt was correct. That is the safety net doing its job.
 
 Known limit: after an agent restart a Follow-up has no history. Fix later by persisting history.
+
+## Addendum: Google ADK + team package layout
+The agent now follows the same structure as our other AI agents (`nova-ai`): an installable
+`src/` package, sub-packages whose `__init__.py` re-exports private `_module.py` files, Pydantic
+config, and a `Protocol` for what the agent needs from its host. The LLM side is a Google ADK
+`LlmAgent`; A2A, negotiation, validation/retry and surface repair are unchanged.
+
+| Before | Now (`agent/src/a2ui_agent_app/`) |
+|---|---|
+| `llm.py` (own Gemini/OpenAI clients) | `agents/ui/_agent.py`: `UiAgent(LlmAgent)` on ADK `Gemini` or `LiteLlm` (`openai/<model>`) |
+| `ROLE` + `RULES` in `ui_brain.py` | `agents/ui/_static_instructions.py` (ADK `static_instruction`) |
+| `processor.prompt_snippet` in the system prompt | `agents/ui/_instruction_provider.py` asks the host via `AgentContextProvider` (`_protocol.py`); `server/_catalog_context.py` answers per session |
+| `histories` dict | ADK `Runner` + `InMemorySessionService`, session id = A2A `contextId` |
+| `config.py` (dataclass + `os.getenv`) | `server/_settings.py` (pydantic-settings, **same env var names**) -> `agents.AgentConfig` |
+| `ui_brain.py` validate/retry loop | `server/_ui_brain.py` (drives the ADK runner) |
+| `repair_surfaces`, `action_to_text`, `a2ui_ext.py` | `a2ui_ext/` |
+| `executor.py`, `server.py`, `script.py` | `server/_executor.py`, `server/_app.py` (`uv run a2ui-agent`), `server/_scripted.py` |
+| `try_agent.py`, `repro_kpi.py`, `list_models.py` | `tests/manual/` (+ `tests/manual/ui_agent` for `uv run adk web tests/manual`) |
+
+Behaviour notes:
+- With `static_instruction` set, ADK sends the dynamic instruction (the catalog schema) as a
+  labelled user-content block instead of in the system prompt. Validation-retry rates on
+  gpt-5.4-nano matched the old code in a side-by-side run.
+- Rejected attempts and the correction messages now stay in the ADK session history (before, only
+  the successful turn was kept). The model sees its own mistake on later turns; costs more tokens.
+- `OPENAI_*` now goes through LiteLLM (`timeout`, `num_retries=3`, `reasoning_effort` or temperature).

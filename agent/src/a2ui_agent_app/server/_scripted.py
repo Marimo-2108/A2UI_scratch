@@ -1,14 +1,12 @@
-"""The scripted "agent brain" for Milestone 2: fixed A2UI messages, no LLM.
+"""The scripted "agent brain" for Milestone 2: fixed A2UI messages, no LLM (AGENT_MODE=scripted).
 
 These are the same messages as web/src/wire/messages.ts (steps 1-3). In Milestone 4 an LLM
 will produce this JSON instead, and everything around it (A2A, negotiation, rendering) stays.
 """
 
-from __future__ import annotations
-
 from typing import Any
 
-from a2ui_ext import PROTOCOL_VERSION
+from a2ui_agent_app.a2ui_ext import PROTOCOL_VERSION
 
 SURFACE_ID = "welcome_card"
 

@@ -3,7 +3,7 @@
 ## Run it
 ```
 # terminal 1
-cd agent && uv run python server.py        # http://localhost:10010
+cd agent && uv run a2ui-agent              # http://localhost:10010
 # terminal 2
 cd web && npm run dev                      # http://localhost:5173  (tab "M2 · Live agent")
 ```
@@ -32,10 +32,11 @@ Raw protocol check without a browser: see "Poke it with curl" below.
 | Official React shell | | does A2A in a Vite Node middleware, not the browser; sends extension `.../v0.9` and puts `mimeType` on the part itself. We talk A2A from the browser directly to see the wire. |
 
 ## Files
-- `agent/a2ui_ext.py`   extension URI, MIME, agent-card extension, negotiation, DataPart builder
-- `agent/script.py`     the fixed A2UI messages (an LLM replaces this in Milestone 4)
-- `agent/executor.py`   A2A `AgentExecutor`: negotiate -> stream one status-update per A2UI message
-- `agent/server.py`     AgentCard + Starlette app + CORS (`expose_headers` for X-A2A-Extensions)
+Agent paths are relative to `agent/src/a2ui_agent_app/`.
+- `a2ui_ext/_extension.py`  extension URI, MIME, agent-card extension, negotiation, DataPart builder
+- `server/_scripted.py`     the fixed A2UI messages (an LLM replaces this in Milestone 4)
+- `server/_executor.py`     A2A `AgentExecutor`: negotiate -> stream one status-update per A2UI message
+- `server/_app.py`          AgentCard + Starlette app + CORS (`expose_headers` for X-A2A-Extensions)
 - `web/src/a2a/client.ts`   hand-written `message/stream` client + SSE parser
 - `web/src/demos/LiveDemo.tsx`  wire inspector + the same `MessageProcessor` as Milestone 1
 

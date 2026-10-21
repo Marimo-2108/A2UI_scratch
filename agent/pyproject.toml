@@ -1,18 +1,36 @@
 [project]
-name = "a2ui-scratch-agent"
+name = "a2ui-agent-app"
 version = "0.1.0"
+description = "A2A agent that streams A2UI (agent-driven UI), built on Google ADK"
+readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "a2a-sdk[http-server]>=0.3.0,<0.4.0",
     "a2ui-agent-sdk",
     "a2ui-core",
+    "google-adk==2.9.2",
     "google-genai>=2.30.0",
-    "openai>=3.29.0",
-    "python-dotenv>=1.2.4",
+    "litellm>=1.84,<=1.102.1",
+    "pydantic-settings>=2",
     "truststore>=0.10.5",
     "uvicorn>=0.54.0",
 ]
 
+[project.scripts]
+a2ui-agent = "a2ui_agent_app.server:main"
+
+[build-system]
+requires = ["uv_build>=0.11.14,<0.14.0"]
+build-backend = "uv_build"
+
 [tool.uv.sources]
 a2ui-core = { git = "https://github.com/a2ui-project/a2ui.git", subdirectory = "python/a2ui_core", rev = "ce03d005c0575ff6708da583d9e7658a34df2d5d" }
 a2ui-agent-sdk = { git = "https://github.com/a2ui-project/a2ui.git", subdirectory = "python/a2ui_agent", rev = "ce03d005c0575ff6708da583d9e7658a34df2d5d" }
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

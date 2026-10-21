@@ -1,6 +1,6 @@
 // Writes the a2uiClientCapabilities this browser would send (incl. our custom catalog as an
 // INLINE JSON Schema) to ../agent/fixtures/inline_caps.json, so the agent can be tested from
-// the command line:   npm run export:caps  &&  uv run python try_agent.py --caps "a KPI dashboard"
+// the command line:   npm run export:caps  &&  uv run python tests/manual/try_agent.py --caps "a KPI dashboard"
 //
 // Run with Node's built-in TypeScript support (imports a .ts file directly).
 import { mkdirSync, writeFileSync } from 'node:fs';

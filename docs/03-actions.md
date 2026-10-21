@@ -27,10 +27,10 @@
 
 ## Files changed
 - `web/src/demos/LiveDemo.tsx`  `actionPart()` + `run()`; action handler now sends to the agent
-- `agent/executor.py`           step 4 reads the action DataPart
-- `agent/script.py`             `greeting_update()`
+- `agent/src/a2ui_agent_app/server/_executor.py`  step 4 reads the action DataPart
+- `agent/src/a2ui_agent_app/server/_scripted.py`  `greeting_update()`
 
 ## Things to try
 - Click the button with an empty name: different reply.
 - In the inspector, compare the outgoing action row with the incoming `updateDataModel` row.
-- Add a second button in `script.py` with a different action name and see "Unknown action".
+- Add a second button in `server/_scripted.py` with a different action name and see "Unknown action".

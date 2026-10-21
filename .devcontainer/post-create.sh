@@ -25,7 +25,7 @@ npm install
 cat <<'EOF'
 
 Ready. Open two terminals:
-  agent:  cd agent && uv run python server.py     (http://localhost:10010)
+  agent:  cd agent && uv run a2ui-agent             (http://localhost:10010)
   web:    cd web && npm run dev -- --host         (http://localhost:5173)
 
 Set AGENT_MODE=scripted in agent/.env to run without an API key,

@@ -1,28 +1,30 @@
-"""Tiny CLI client to poke the agent without a browser:  uv run python try_agent.py "make a signup form"
+"""Tiny CLI client to poke the agent without a browser:
+    uv run python tests/manual/try_agent.py "make a signup form"
 
 Prints a compact view of every streamed event. Handy for debugging the LLM output.
 """
 
 import json
+import os
 import sys
 import time
 import uuid
+from pathlib import Path
 
 import httpx
-
-import os
 
 URL = os.getenv("AGENT_URL", "http://localhost:10010/")  # override to test another instance
 EXT = "https://a2ui.org/a2a-extension/a2ui/v0.9"
 CATALOG = "https://a2ui.org/specification/v0_9/catalogs/basic/catalog.json"
 
 
+FIXTURES = Path(__file__).resolve().parents[2] / "fixtures"  # agent/fixtures
 BASIC_CAPS = {"v0.9": {"supportedCatalogIds": [CATALOG]}}
 
 
 def load_caps():
     """Capabilities exported from the web app (our custom catalog inline). `npm run export:caps`."""
-    return json.load(open("fixtures/inline_caps.json", encoding="utf-8"))
+    return json.load(open(FIXTURES / "inline_caps.json", encoding="utf-8"))
 
 
 CAPS = BASIC_CAPS  # replaced by main when --caps is passed
