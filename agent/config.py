@@ -27,6 +27,8 @@ class Settings:
     agent_mode: str = os.getenv("AGENT_MODE", "scripted").lower()
 
     host: str = os.getenv("AGENT_HOST", "localhost")
+    # Interface uvicorn listens on. Defaults to `host`; dev container sets 0.0.0.0 so ports forward.
+    bind_host: str = os.getenv("AGENT_BIND_HOST") or os.getenv("AGENT_HOST", "localhost")
     port: int = int(os.getenv("AGENT_PORT", "10010"))
     # Which browser origins may call the agent (CORS).
     web_origin_regex: str = os.getenv("WEB_ORIGIN_REGEX", r"http://localhost:\d+")

@@ -57,5 +57,5 @@ def build_app():
 
 
 if __name__ == "__main__":
-    uvicorn.run(build_app(), host=HOST, port=PORT)
+    uvicorn.run(build_app(), host=settings.bind_host, port=PORT)
 

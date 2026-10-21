@@ -6,7 +6,18 @@ A learning/prototyping project for [A2UI](https://a2ui.org) (agent-to-UI). An AI
 - `web/` – React + Vite client using `@a2ui/react`, with demos and a custom catalog.
 - `docs/` – Step-by-step notes (wire format, A2A transport, actions, Gemini, custom components, catalog scaling).
 
-## Prerequisites
+## Quick start (dev container, recommended)
+
+Only [Docker](https://www.docker.com/) and VS Code/Cursor with the Dev Containers extension are needed. No local Python, uv or Node.
+
+1. Open this folder and run **Dev Containers: Reopen in Container**. First build installs everything (`.devcontainer/post-create.sh`) and creates `agent/.env` from the example.
+2. Edit `agent/.env` (`AGENT_MODE=scripted` needs no key).
+3. In two terminals: `cd agent && uv run python server.py` and `cd web && npm run dev`.
+4. Open http://localhost:5173 (ports 10010 and 5173 are forwarded automatically).
+
+The container keeps `.venv` and `node_modules` in Docker volumes, so a host-side Windows install won't conflict.
+
+## Prerequisites (manual setup, without the dev container)
 
 - Python 3.12+ and [uv](https://docs.astral.sh/uv/)
 - Node.js 20+ and npm
