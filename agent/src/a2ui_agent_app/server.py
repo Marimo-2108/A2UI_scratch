@@ -10,10 +10,9 @@ from a2a.types import AgentCapabilities, AgentCard, AgentSkill
 from starlette.applications import Starlette
 from starlette.middleware.cors import CORSMiddleware
 
-from a2ui_agent_app.a2ui_ext import agent_extension
-
-from ._executor import UiExecutor
-from ._settings import Settings
+from .a2ui import agent_extension
+from .executor import UiExecutor
+from .settings import Settings
 
 
 def build_card(settings: Settings) -> AgentCard:
@@ -58,3 +57,7 @@ def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s: %(message)s")
     settings = Settings()
     uvicorn.run(build_app(settings), host=settings.agent_bind_host, port=settings.agent_port)
+
+
+if __name__ == "__main__":
+    main()

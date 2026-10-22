@@ -1,5 +1,1 @@
-from ._protocol import AgentContextProvider
-
-__all__ = [
-    "AgentContextProvider",
-]
+"""Learning example: an ADK agent streams A2UI to a React client over A2A."""

@@ -20,7 +20,7 @@ with property values the schema allows. It cannot ship code.
 - `web/src/catalog/statCardApi.ts`  API half: `name` + Zod schema (`.describe()` text goes to the model)
 - `web/src/catalog/StatCard.tsx`    implementation half (`createComponentImplementation`)
 - `web/src/catalog/myCatalog.ts`    `Catalog(id, '0.9', [...basic, StatCard], ...)` under OUR catalog id
-- `LiveDemo.tsx`                    processor uses `myCatalog`; capabilities come from
+- `web/src/App.tsx`                processor uses `myCatalog`; capabilities come from
                                     `processor.getRendererCapabilities({versions, includeInlineCatalogs:true})`
 - `agent`: `A2uiGenerator(..., accepts_inline_catalogs=True)`; agent card says `acceptsInlineCatalogs: true`
 - `web/scripts/export-capabilities.mjs` + `npm run export:caps` -> `agent/fixtures/inline_caps.json`
@@ -67,7 +67,7 @@ existed. But rejected attempts never reach the client, so the browser had no suc
 Reproduced with `tests/manual/repro_kpi.py`: 2 of 4 runs broken, every broken run had 2 validation retries.
 
 **Fixes (three layers):**
-1. `repair_surfaces()` (now `a2ui_ext/_surfaces.py`): the agent remembers which surfaces it has actually DELIVERED
+1. `repair_surfaces()` (now `a2ui.py`): the agent remembers which surfaces it has actually DELIVERED
    per conversation; an update for an unknown surface gets the missing `createSurface` inserted
    (with the negotiated catalog id); a duplicate `createSurface` is dropped; `deleteSurface` forgets.
    Unit-tested in `tests/test_repair.py` (`uv run python tests/test_repair.py`).

@@ -2,9 +2,37 @@
 
 A learning/prototyping project for [A2UI](https://a2ui.org) (agent-to-UI). An AI agent streams declarative UI over the A2A protocol, and a React app renders it with a custom component catalog.
 
-- `agent/` – Python A2A server (package `a2ui_agent_app`, see `agent/README.md`). A Google ADK agent (Gemini or OpenAI) decides the UI.
-- `web/` – React + Vite client using `@a2ui/react`, with demos and a custom catalog.
-- `docs/` – Step-by-step notes (wire format, A2A transport, actions, Gemini, custom components, catalog scaling).
+- [agent/](./agent/README.md) – Python A2A server. A Google ADK agent (Gemini or OpenAI) decides the UI.
+- [web/](./web/README.md) – React + Vite client with a wire inspector and a custom catalog.
+- [docs/](./docs/) – Learning notes and historical experiments; start with the current workflow below.
+
+## Follow the workflow
+
+```text
+React prompt
+  -> A2A request (including the client's component catalog)
+  -> ADK agent + system prompt + catalog schema
+  -> model returns A2UI JSON
+  -> validate, retry if needed, repair surface messages
+  -> A2A response stream
+  -> React MessageProcessor -> rendered UI
+  -> button action -> another request in the same conversation
+```
+
+Read the files in this order:
+
+1. [web/src/App.tsx](./web/src/App.tsx): prompt, conversation and rendered surfaces.
+2. [web/src/a2a/client.ts](./web/src/a2a/client.ts): send a request and read the SSE response.
+3. [agent/server.py](./agent/src/a2ui_agent_app/server.py): backend entry point and HTTP app.
+4. [agent/executor.py](./agent/src/a2ui_agent_app/executor.py): incoming request to outgoing task updates.
+5. [agent/runner.py](./agent/src/a2ui_agent_app/runner.py): catalog negotiation, ADK sessions and validation/retry.
+6. [agents/agent.py](./agent/src/a2ui_agent_app/agents/agent.py) and
+   [system-prompt.txt](./agent/src/a2ui_agent_app/agents/system-prompt.txt): model selection and instructions.
+7. [agent/a2ui.py](./agent/src/a2ui_agent_app/a2ui.py): protocol helpers and surface repair.
+
+For a custom-component example, follow
+[myCatalog.ts](./web/src/catalog/myCatalog.ts) to [StatCard.tsx](./web/src/catalog/StatCard.tsx).
+The browser sends the catalog schema inline so the backend can generate and validate that component.
 
 ## Quick start (dev container, recommended)
 

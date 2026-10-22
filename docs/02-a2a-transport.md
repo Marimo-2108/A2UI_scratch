@@ -36,11 +36,11 @@ Raw protocol check without a browser: see "Poke it with curl" below.
 
 ## Files
 Agent paths are relative to `agent/src/a2ui_agent_app/`.
-- `a2ui_ext/_extension.py`  extension URI, MIME, agent-card extension, negotiation, DataPart builder
-- `server/_executor.py`     A2A `AgentExecutor`: negotiate -> stream one status-update per A2UI message
-- `server/_app.py`          AgentCard + Starlette app + CORS (`expose_headers` for X-A2A-Extensions)
+- `a2ui.py`  extension URI, MIME, agent-card extension, negotiation, DataPart builder
+- `executor.py`  A2A `AgentExecutor`: negotiate -> stream one status-update per A2UI message
+- `server.py`  AgentCard + Starlette app + CORS (`expose_headers` for X-A2A-Extensions)
 - `web/src/a2a/client.ts`   hand-written `message/stream` client + SSE parser
-- `web/src/demos/LiveDemo.tsx`  wire inspector + the same `MessageProcessor` as Milestone 1
+- `web/src/App.tsx`  wire inspector + the same `MessageProcessor` as Milestone 1
 
 ## Poke it with curl
 ```

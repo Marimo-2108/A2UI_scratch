@@ -3,7 +3,7 @@
 Flow:
   1. look at what arrived (text or an A2UI action)
   2. A2A task bookkeeping
-  3. negotiation: extension header (catalog negotiation happens inside UiBrain)
+  3. negotiation: extension header (catalog negotiation happens inside UiRunner)
   4. ask the brain (the ADK UI agent) and stream each result back as a status-update
   5. finish with input-required ("done, waiting for the user's next action")
 """
@@ -16,18 +16,17 @@ from a2a.server.tasks import TaskUpdater
 from a2a.types import DataPart, TaskState
 from a2a.utils import new_agent_parts_message, new_agent_text_message, new_task
 
-from a2ui_agent_app.a2ui_ext import a2ui_requested, action_to_text, client_capabilities
-
-from ._settings import Settings
-from ._ui_brain import UiBrain
+from .a2ui import a2ui_requested, action_to_text, client_capabilities
+from .runner import UiRunner
+from .settings import Settings
 
 log = logging.getLogger("executor")
 
 
 class UiExecutor(AgentExecutor):
     def __init__(self, settings: Settings) -> None:
-        self.brain = UiBrain(settings.to_agent_config(), settings.gemini_max_retries)
-        log.info("llm: %s", self.brain.llm_name)
+        self.runner = UiRunner(settings)
+        log.info("llm: %s", self.runner.llm_name)
 
     async def execute(self, context: RequestContext, event_queue: EventQueue) -> None:
         msg = context.message
@@ -65,14 +64,14 @@ class UiExecutor(AgentExecutor):
                 final=True,
             )
             return
-        # Catalog negotiation is left to the SDK inside UiBrain (it may even accept the client's
+        # Catalog negotiation is left to the SDK inside UiRunner (it may even accept the client's
         # INLINE catalog); it fails the task if nothing matches.
 
         # --- 4. the brain ------------------------------------------------------------------
         try:
             await say("Thinking...")
             user_input = action_to_text(action) if action is not None else user_text
-            async for part in self.brain.respond(
+            async for part in self.runner.respond(
                 task.context_id, user_input, client_capabilities(context) or {}
             ):
                 await updater.update_status(

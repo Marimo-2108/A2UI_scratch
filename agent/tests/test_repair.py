@@ -2,7 +2,7 @@
     uv run pytest
     uv run python tests/test_repair.py
 """
-from a2ui_agent_app.a2ui_ext import repair_surfaces
+from a2ui_agent_app.a2ui import repair_surfaces
 
 CAT = "cat://x"
 

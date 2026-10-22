@@ -5,7 +5,7 @@ Prints model names only (never the key). Useful because vendors retire/rename mo
 
 import sys
 
-from a2ui_agent_app.server import Settings
+from a2ui_agent_app.settings import Settings
 
 settings = Settings()
 settings.apply_truststore()

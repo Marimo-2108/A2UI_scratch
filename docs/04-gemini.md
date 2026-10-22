@@ -95,7 +95,7 @@ OpenAI setup: add `OPENAI_API_KEY` and `OPENAI_MODEL` to `agent/.env`;
 Cause (browser-side error, from the library): the model sent `createSurface` for a surface that is
 already on screen. Two ways that happens: (1) the model ignores the prompt rule; (2) the agent was
 RESTARTED, so its in-RAM memory of the conversation is gone, while the browser still holds the screen.
-Fix in `LiveDemo.tsx`: if `createSurface` names a surface the processor already has
+Fix in `web/src/App.tsx`: if `createSurface` names a surface the processor already has
 (`processor.getSurface(id)`), skip it and log "ignored duplicate createSurface" in the inspector;
 the updateComponents / updateDataModel that follow still apply. The official React shell does the same.
 Verified against the real library: a 2nd createSurface throws, getSurface detects it, updates still apply.
@@ -106,22 +106,21 @@ message ("multiple conflicting update actions"). The validate-and-retry loop cau
 
 Known limit: after an agent restart a Follow-up has no history. Fix later by persisting history.
 
-## Addendum: Google ADK + team package layout
-The agent now follows the same structure as our other AI agents (`nova-ai`): an installable
-`src/` package, sub-packages whose `__init__.py` re-exports private `_module.py` files, Pydantic
-config, and a `Protocol` for what the agent needs from its host. The LLM side is a Google ADK
-`LlmAgent`; A2A, negotiation, validation/retry and surface repair are unchanged.
+## Current layout: Google ADK, simplified for learning
+The backend is an installable `src/` package with one `agents/` folder and flat server modules.
+There is no API folder, context-provider Protocol or nested agent hierarchy. The LLM side is
+a Google ADK `LlmAgent`; A2A, negotiation, validation/retry and surface repair are retained.
 
 | Before | Now (`agent/src/a2ui_agent_app/`) |
 |---|---|
-| `llm.py` (own Gemini/OpenAI clients) | `agents/ui/_agent.py`: `UiAgent(LlmAgent)` on ADK `Gemini` or `LiteLlm` (`openai/<model>`) |
-| `ROLE` + `RULES` in `ui_brain.py` | `agents/ui/_static_instructions.py` (ADK `static_instruction`) |
-| `processor.prompt_snippet` in the system prompt | `agents/ui/_instruction_provider.py` asks the host via `AgentContextProvider` (`_protocol.py`); `server/_catalog_context.py` answers per session |
+| `llm.py` (own Gemini/OpenAI clients) | `agents/agent.py`: `create_agent()` builds an ADK `LlmAgent` on `Gemini` or `LiteLlm` (`openai/<model>`) |
+| `ROLE` + `RULES` in `ui_brain.py` | `agents/system-prompt.txt` (ADK `static_instruction`) |
+| `processor.prompt_snippet` in the system prompt | `runner.py`: a callable reads the schema from invocation-local `temp:` state |
 | `histories` dict | ADK `Runner` + `InMemorySessionService`, session id = A2A `contextId` |
-| `config.py` (dataclass + `os.getenv`) | `server/_settings.py` (pydantic-settings, **same env var names**) -> `agents.AgentConfig` |
-| `ui_brain.py` validate/retry loop | `server/_ui_brain.py` (drives the ADK runner) |
-| `repair_surfaces`, `action_to_text`, `a2ui_ext.py` | `a2ui_ext/` |
-| `executor.py`, `server.py`, `script.py` | `server/_executor.py`, `server/_app.py` (`uv run a2ui-agent`); `script.py` and scripted mode were removed |
+| `config.py` (dataclass + `os.getenv`) | `agents/config.py` for agent settings; `settings.py` adds server settings, preserving env var names |
+| `ui_brain.py` validate/retry loop | `runner.py` (drives the ADK runner) |
+| `repair_surfaces`, `action_to_text`, `a2ui_ext.py` | `a2ui.py` |
+| `executor.py`, `server.py`, `script.py` | `executor.py`, `server.py` (`uv run a2ui-agent`); scripted mode was removed |
 | `try_agent.py`, `repro_kpi.py`, `list_models.py` | `tests/manual/` (+ `tests/manual/ui_agent` for `uv run adk web tests/manual`) |
 
 Behaviour notes:

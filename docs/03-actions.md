@@ -30,8 +30,8 @@
   separating structure from data.
 
 ## Files changed
-- `web/src/demos/LiveDemo.tsx`  `actionPart()` + `run()`; action handler now sends to the agent
-- `agent/src/a2ui_agent_app/server/_executor.py`  step 4 reads the action DataPart
+- `web/src/App.tsx`  `actionPart()` + `run()`; action handler sends to the agent
+- `agent/src/a2ui_agent_app/executor.py`  reads the action DataPart
 
 ## Things to try
 - In the inspector, compare the outgoing action row with the incoming update rows.
