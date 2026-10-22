@@ -1,11 +1,14 @@
 # Milestone 2: A2UI over A2A (scripted agent)
 
+> **Removed:** the scripted agent (`AGENT_MODE=scripted`, fixed welcome card) was deleted in a later
+> cleanup. The agent always uses the LLM now (Milestone 4). The transport notes below still apply.
+
 ## Run it
 ```
 # terminal 1
 cd agent && uv run a2ui-agent              # http://localhost:10010
 # terminal 2
-cd web && npm run dev                      # http://localhost:5173  (tab "M2 · Live agent")
+cd web && npm run dev                      # http://localhost:5173
 ```
 Raw protocol check without a browser: see "Poke it with curl" below.
 
@@ -34,7 +37,6 @@ Raw protocol check without a browser: see "Poke it with curl" below.
 ## Files
 Agent paths are relative to `agent/src/a2ui_agent_app/`.
 - `a2ui_ext/_extension.py`  extension URI, MIME, agent-card extension, negotiation, DataPart builder
-- `server/_scripted.py`     the fixed A2UI messages (an LLM replaces this in Milestone 4)
 - `server/_executor.py`     A2A `AgentExecutor`: negotiate -> stream one status-update per A2UI message
 - `server/_app.py`          AgentCard + Starlette app + CORS (`expose_headers` for X-A2A-Extensions)
 - `web/src/a2a/client.ts`   hand-written `message/stream` client + SSE parser
@@ -47,3 +49,4 @@ curl -N -X POST http://localhost:10010/ -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","id":1,"method":"message/stream","params":{"message":{"kind":"message","messageId":"m1","role":"user","parts":[{"kind":"text","text":"hi"}],"metadata":{"a2uiClientCapabilities":{"v0.9.1":{"supportedCatalogIds":["https://a2ui.org/specification/v0_9/catalogs/basic/catalog.json"]}}}}}}'
 ```
 Try removing the header, or the metadata, and see the agent refuse. That is negotiation.
+(Needs a configured API key now; the reply comes from the LLM.)

@@ -1,8 +1,11 @@
 # Milestone 1: the wire (no agent, no AI)
 
 ## What we built
-`web/` feeds hand-written A2UI JSON into the real `MessageProcessor`
-(`@a2ui/web_core/v0_9`) and renders with `@a2ui/react/v0_9`.
+`web/` fed hand-written A2UI JSON into the real `MessageProcessor`
+(`@a2ui/web_core/v0_9`) and rendered with `@a2ui/react/v0_9`.
+
+> **Removed:** the "M1 · Static wire" tab (`WireDemo.tsx`, `wire/messages.ts`) was deleted in the
+> cleanup that dropped the scripted agent. The concepts below still apply to the live app.
 
 ## Mental model
 - Agent -> client is a stream of JSON envelopes. Four types:

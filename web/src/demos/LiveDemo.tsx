@@ -58,7 +58,7 @@ function describe(ev: A2AEvent): string {
 }
 
 export default function LiveDemo() {
-  const [prompt, setPrompt] = useState('show me the welcome card');
+  const [prompt, setPrompt] = useState('a small signup form');
   const [busy, setBusy] = useState(false);
   const [trace, setTrace] = useState<TraceRow[]>([]);
   const [selected, setSelected] = useState<number | null>(null);
@@ -68,9 +68,9 @@ export default function LiveDemo() {
   const contextId = useRef<string | undefined>(undefined);
   const seq = useRef(0);
 
-  // The MessageProcessor from Milestone 1. Its 2nd argument is the ACTION HANDLER: the library
-  // calls it when the user clicks a Button whose component has an `action.event`.
-  // Milestone 3: instead of only logging, we now send the action to the agent.
+  // The MessageProcessor owns surface state. Its 2nd argument is the ACTION HANDLER: the library
+  // calls it when the user clicks a Button whose component has an `action.event`; we send the
+  // action to the agent.
   const makeProcessor = () => {
     const p: MessageProcessor<ReactCatalogComponent> = new MessageProcessor<ReactCatalogComponent>(
       [myCatalog], // basic components + our StatCard

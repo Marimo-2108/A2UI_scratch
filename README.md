@@ -2,7 +2,7 @@
 
 A learning/prototyping project for [A2UI](https://a2ui.org) (agent-to-UI). An AI agent streams declarative UI over the A2A protocol, and a React app renders it with a custom component catalog.
 
-- `agent/` – Python A2A server (package `a2ui_agent_app`, see `agent/README.md`). Runs in `scripted` mode (fixed UI, no key needed) or `llm` mode (a Google ADK agent on Gemini or OpenAI decides the UI).
+- `agent/` – Python A2A server (package `a2ui_agent_app`, see `agent/README.md`). A Google ADK agent (Gemini or OpenAI) decides the UI.
 - `web/` – React + Vite client using `@a2ui/react`, with demos and a custom catalog.
 - `docs/` – Step-by-step notes (wire format, A2A transport, actions, Gemini, custom components, catalog scaling).
 
@@ -11,7 +11,7 @@ A learning/prototyping project for [A2UI](https://a2ui.org) (agent-to-UI). An AI
 Only [Docker](https://www.docker.com/) and VS Code/Cursor with the Dev Containers extension are needed. No local Python, uv or Node.
 
 1. Open this folder and run **Dev Containers: Reopen in Container**. First build installs everything (`.devcontainer/post-create.sh`) and creates `agent/.env` from the example.
-2. Edit `agent/.env` (`AGENT_MODE=scripted` needs no key).
+2. Edit `agent/.env` and set an API key (`GEMINI_API_KEY`, or `OPENAI_API_KEY` + `OPENAI_MODEL` with `LLM_PROVIDER=openai`).
 3. In two terminals: `cd agent && uv run a2ui-agent` and `cd web && npm run dev`.
 4. Open http://localhost:5173 (ports 10010 and 5173 are forwarded automatically).
 
@@ -34,7 +34,7 @@ uv sync
 uv run a2ui-agent         # listens on http://localhost:10010
 ```
 
-In `.env`, set `AGENT_MODE=scripted` to try it without an API key, or `AGENT_MODE=llm` with `GEMINI_API_KEY` (or `OPENAI_API_KEY` and `LLM_PROVIDER=openai`). Never commit `.env`.
+In `.env`, set `GEMINI_API_KEY` (or `OPENAI_API_KEY`, `OPENAI_MODEL` and `LLM_PROVIDER=openai`). An API key is required. Never commit `.env`.
 
 Quick check without a browser:
 
@@ -50,7 +50,7 @@ npm install
 npm run dev                # http://localhost:5173
 ```
 
-Open the live agent demo tab and start a new conversation.
+Open the app and start a new conversation.
 
 If you change the custom catalog, regenerate the capabilities fixture the agent uses with `npm run export:caps` (in `web/`).
 

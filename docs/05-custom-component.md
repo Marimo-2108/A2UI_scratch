@@ -39,8 +39,8 @@ unknown component `Banana` is REJECTED; a correct StatCard is accepted.
   "Recursive reference detected ... Defaulting to any" (function-call arguments). Our StatCard
   schema is exact; deeply nested function-call args are validated loosely on the agent side.
 - Inline catalogs are sent on EVERY request (~25 KB of metadata) and add ~1.3k tokens to the prompt.
-- Executor: my hand-written `choose_catalog` only knows the basic id, so it now runs ONLY in scripted
-  mode. In LLM mode the SDK negotiates and fails the task if nothing matches.
+- Executor: my hand-written `choose_catalog` only knew the basic id, so it ran ONLY in scripted
+  mode (both since removed). The SDK negotiates and fails the task if nothing matches.
 - A catalog id is just a string both sides agree on; changing it is how the agent can tell
   "client has StatCard" from "client has only basic".
 - Network: `api.openai.com` started redirecting (HTTP 303) to `blocked.teams.cloudflare.com`
@@ -53,7 +53,7 @@ unknown component `Banana` is REJECTED; a correct StatCard is accepted.
 cd web && npm run export:caps
 cd ../agent && uv run python tests/manual/try_agent.py --caps "a KPI dashboard for an online shop"
 ```
-In the browser: tab "M2 · Live agent" -> "a KPI dashboard for an online shop" -> New conversation.
+In the browser: "a KPI dashboard for an online shop" -> New conversation.
 Then Follow-up: "add a fourth card for conversion rate", "make churn trend up".
 Ideas to extend: add a `size` enum, an `icon` property, or an `action` so a card is clickable.
 

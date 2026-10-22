@@ -1,5 +1,9 @@
 # Milestone 3: the round trip (user action -> agent -> UI update)
 
+> **Removed:** the scripted `submit_name` / `greeting_update()` reply described here was deleted with
+> the scripted agent. Actions now become `USER_ACTION {...}` text for the LLM (see Milestone 4);
+> the client side of the round trip is unchanged.
+
 ## The loop in one picture
 ```
  user types a name, clicks Button
@@ -28,9 +32,6 @@
 ## Files changed
 - `web/src/demos/LiveDemo.tsx`  `actionPart()` + `run()`; action handler now sends to the agent
 - `agent/src/a2ui_agent_app/server/_executor.py`  step 4 reads the action DataPart
-- `agent/src/a2ui_agent_app/server/_scripted.py`  `greeting_update()`
 
 ## Things to try
-- Click the button with an empty name: different reply.
-- In the inspector, compare the outgoing action row with the incoming `updateDataModel` row.
-- Add a second button in `server/_scripted.py` with a different action name and see "Unknown action".
+- In the inspector, compare the outgoing action row with the incoming update rows.

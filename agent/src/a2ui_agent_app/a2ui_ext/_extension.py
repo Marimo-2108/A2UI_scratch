@@ -3,7 +3,7 @@ comes from the official SDK).
 
   1. constants: protocol version + extension URI
   2. the AgentExtension we advertise on the agent card
-  3. negotiation: did the client ask for A2UI, and which catalog should we use?
+  3. negotiation: did the client ask for A2UI, and what can it render?
   4. building an A2A DataPart that carries ONE A2UI message
 """
 
@@ -62,18 +62,6 @@ def client_capabilities(context: RequestContext) -> dict[str, Any] | None:
     caps = metadata.get("a2uiClientCapabilities")
     log.info("a2uiClientCapabilities: %s", caps)
     return caps if isinstance(caps, dict) else None
-
-
-def choose_catalog(context: RequestContext) -> str | None:
-    """Pick a catalog both sides support, or None if there is no overlap."""
-    caps = client_capabilities(context)
-    if caps is None:
-        return None
-    client_ids = (caps.get(PROTOCOL_VERSION) or {}).get("supportedCatalogIds") or []
-    for catalog_id in SUPPORTED_CATALOG_IDS:
-        if catalog_id in client_ids:
-            return catalog_id
-    return None
 
 
 def a2ui_part(message: dict[str, Any]) -> Part:

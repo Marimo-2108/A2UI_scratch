@@ -28,6 +28,6 @@ Ready. Open two terminals:
   agent:  cd agent && uv run a2ui-agent             (http://localhost:10010)
   web:    cd web && npm run dev -- --host         (http://localhost:5173)
 
-Set AGENT_MODE=scripted in agent/.env to run without an API key,
-or AGENT_MODE=llm plus GEMINI_API_KEY / OPENAI_API_KEY.
+Set GEMINI_API_KEY (or LLM_PROVIDER=openai + OPENAI_API_KEY / OPENAI_MODEL)
+in agent/.env; the agent needs an API key to start.
 EOF

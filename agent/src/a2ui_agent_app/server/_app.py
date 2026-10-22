@@ -19,7 +19,7 @@ from ._settings import Settings
 def build_card(settings: Settings) -> AgentCard:
     return AgentCard(
         name="Scratch A2UI Agent",
-        description="Streams A2UI over A2A (mode: scripted or llm).",
+        description="Streams A2UI over A2A; an LLM decides the UI.",
         url=f"http://{settings.agent_host}:{settings.agent_port}/",
         version="0.1.0",
         default_input_modes=["text"],
@@ -27,10 +27,10 @@ def build_card(settings: Settings) -> AgentCard:
         capabilities=AgentCapabilities(streaming=True, extensions=[agent_extension()]),
         skills=[
             AgentSkill(
-                id="welcome_card",
-                name="Welcome card",
-                description="Shows a welcome card.",
-                tags=["demo"],
+                id="generate_ui",
+                name="Generate UI",
+                description="Answers a request with a small user interface (A2UI).",
+                tags=["a2ui", "ui"],
             )
         ],
     )

@@ -1,7 +1,7 @@
 """All settings in one place. Values come from environment variables / agent/.env.
 
 Copy .env.example to .env and fill in an API key. Never commit .env.
-Variable names match the field names (case-insensitive), e.g. AGENT_MODE -> agent_mode.
+Variable names match the field names (case-insensitive), e.g. LLM_PROVIDER -> llm_provider.
 """
 
 import os
@@ -20,9 +20,6 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    # "scripted" = hard-coded UI (no API key needed). "llm" (alias "gemini") = an AI decides the UI.
-    agent_mode: str = "scripted"
-
     agent_host: str = "localhost"
     # Interface uvicorn listens on. Defaults to `agent_host`; dev container sets 0.0.0.0 so ports forward.
     agent_bind_host: str = ""
@@ -34,7 +31,7 @@ class Settings(BaseSettings):
     # certificate chain". truststore makes Python use the OS store. Verification stays ON.
     use_system_truststore: bool = True
 
-    # Which AI vendor answers in "llm" mode: gemini | openai
+    # Which AI vendor decides the UI: gemini | openai
     llm_provider: str = "gemini"
 
     openai_api_key: SecretStr = SecretStr("")
@@ -56,16 +53,11 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def _normalize(self) -> "Settings":
-        self.agent_mode = self.agent_mode.lower()
         self.llm_provider = self.llm_provider.lower()
         self.openai_reasoning_effort = self.openai_reasoning_effort.lower()
         self.gemini_thinking_level = self.gemini_thinking_level.upper()
         self.agent_bind_host = self.agent_bind_host or self.agent_host
         return self
-
-    @property
-    def llm_enabled(self) -> bool:
-        return self.agent_mode in ("llm", "gemini")  # "gemini" = old name, kept as alias
 
     def apply_truststore(self) -> None:
         if self.use_system_truststore:

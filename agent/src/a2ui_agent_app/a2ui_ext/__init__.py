@@ -7,7 +7,6 @@ from ._extension import (
     a2ui_part,
     a2ui_requested,
     agent_extension,
-    choose_catalog,
     client_capabilities,
 )
 from ._surfaces import repair_surfaces
@@ -21,7 +20,6 @@ __all__ = [
     "a2ui_requested",
     "action_to_text",
     "agent_extension",
-    "choose_catalog",
     "client_capabilities",
     "repair_surfaces",
 ]

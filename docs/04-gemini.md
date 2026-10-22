@@ -4,10 +4,10 @@
 ```
 cd agent
 copy .env.example .env      # then set GEMINI_API_KEY (never commit .env)
-uv run a2ui-agent           # AGENT_MODE=llm in .env; set AGENT_MODE=scripted for the fixed UI
+uv run a2ui-agent           # needs an API key in .env
 uv run python tests/manual/try_agent.py "a small signup form"   # poke it without a browser
 ```
-Web: tab "M2 · Live agent" -> **New conversation** (fresh screen + memory) or **Follow-up**
+Web: **New conversation** (fresh screen + memory) or **Follow-up**
 (same conversation, same screen).
 
 ## What the agent does per request
@@ -64,7 +64,7 @@ is the safety net between a probabilistic model and your UI. Example from the pr
 ## Addendum: provider layer (Gemini or OpenAI)
 `agent/llm.py` is the only file that knows the vendor. Everything else talks to a tiny interface:
 `complete(system, messages) -> text`. Choose with `LLM_PROVIDER=gemini|openai` in `.env`.
-`gemini_brain.py` became the vendor-neutral `ui_brain.py`. `AGENT_MODE=llm` (alias `gemini`).
+`gemini_brain.py` became the vendor-neutral `ui_brain.py`. (`AGENT_MODE` was later removed along with scripted mode.)
 
 Lesson: A2UI is a *format*. Prompt building, validation, retry and the client never changed.
 
@@ -121,7 +121,7 @@ config, and a `Protocol` for what the agent needs from its host. The LLM side is
 | `config.py` (dataclass + `os.getenv`) | `server/_settings.py` (pydantic-settings, **same env var names**) -> `agents.AgentConfig` |
 | `ui_brain.py` validate/retry loop | `server/_ui_brain.py` (drives the ADK runner) |
 | `repair_surfaces`, `action_to_text`, `a2ui_ext.py` | `a2ui_ext/` |
-| `executor.py`, `server.py`, `script.py` | `server/_executor.py`, `server/_app.py` (`uv run a2ui-agent`), `server/_scripted.py` |
+| `executor.py`, `server.py`, `script.py` | `server/_executor.py`, `server/_app.py` (`uv run a2ui-agent`); `script.py` and scripted mode were removed |
 | `try_agent.py`, `repro_kpi.py`, `list_models.py` | `tests/manual/` (+ `tests/manual/ui_agent` for `uv run adk web tests/manual`) |
 
 Behaviour notes:
