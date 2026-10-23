@@ -6,9 +6,9 @@
 ## Run it
 ```
 # terminal 1
-cd agent && uv run a2ui-agent              # http://localhost:10010
+cd Backend && uv run a2ui-agent              # http://localhost:10010
 # terminal 2
-cd web && npm run dev                      # http://localhost:5173
+cd Frontend && npm run dev                      # http://localhost:5173
 ```
 Raw protocol check without a browser: see "Poke it with curl" below.
 
@@ -35,12 +35,12 @@ Raw protocol check without a browser: see "Poke it with curl" below.
 | Official React shell | | does A2A in a Vite Node middleware, not the browser; sends extension `.../v0.9` and puts `mimeType` on the part itself. We talk A2A from the browser directly to see the wire. |
 
 ## Files
-Agent paths are relative to `agent/src/a2ui_agent_app/`.
+Agent paths are relative to `Backend/src/a2ui_agent_app/`.
 - `a2ui.py`  extension URI, MIME, agent-card extension, negotiation, DataPart builder
 - `executor.py`  A2A `AgentExecutor`: negotiate -> stream one status-update per A2UI message
 - `server.py`  AgentCard + Starlette app + CORS (`expose_headers` for X-A2A-Extensions)
-- `web/src/a2a/client.ts`   hand-written `message/stream` client + SSE parser
-- `web/src/App.tsx`  wire inspector + the same `MessageProcessor` as Milestone 1
+- `Frontend/src/a2a/client.ts`   hand-written `message/stream` client + SSE parser
+- `Frontend/src/App.tsx`  wire inspector + the same `MessageProcessor` as Milestone 1
 
 ## Poke it with curl
 ```

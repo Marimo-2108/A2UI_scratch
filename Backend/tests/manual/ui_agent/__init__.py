@@ -1,7 +1,7 @@
 """The UI agent on its own, for the ADK dev UI / CLI (no A2A server, no browser renderer):
 
-    cd agent && uv run adk web tests/manual      # pick "ui_agent"
-    cd agent && uv run adk run tests/manual/ui_agent
+    cd Backend && uv run adk web tests/manual      # pick "ui_agent"
+    cd Backend && uv run adk run tests/manual/ui_agent
 
 Replies are raw text with an <a2ui-json> block; validation/repair only happens in the server.
 """

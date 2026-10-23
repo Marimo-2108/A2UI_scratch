@@ -1,7 +1,7 @@
 # Milestone 1: the wire (no agent, no AI)
 
 ## What we built
-`web/` fed hand-written A2UI JSON into the real `MessageProcessor`
+`Frontend/` fed hand-written A2UI JSON into the real `MessageProcessor`
 (`@a2ui/web_core/v0_9`) and rendered with `@a2ui/react/v0_9`.
 
 > **Removed:** the "M1 · Static wire" tab (`WireDemo.tsx`, `wire/messages.ts`) was deleted in the

@@ -19,8 +19,8 @@
   // Keep Linux-built deps out of the bind-mounted source so they never clash with a host
   // (e.g. Windows) .venv / node_modules.
   "mounts": [
-    "source=a2ui-scratch-venv,target=${containerWorkspaceFolder}/agent/.venv,type=volume",
-    "source=a2ui-scratch-node-modules,target=${containerWorkspaceFolder}/web/node_modules,type=volume"
+    "source=a2ui-scratch-venv,target=${containerWorkspaceFolder}/Backend/.venv,type=volume",
+    "source=a2ui-scratch-node-modules,target=${containerWorkspaceFolder}/Frontend/node_modules,type=volume"
   ],
 
   "forwardPorts": [10010, 5173],
@@ -40,7 +40,7 @@
         "dbaeumer.vscode-eslint"
       ],
       "settings": {
-        "python.defaultInterpreterPath": "${containerWorkspaceFolder}/agent/.venv/bin/python",
+        "python.defaultInterpreterPath": "${containerWorkspaceFolder}/Backend/.venv/bin/python",
         "python.terminal.activateEnvironment": true
       }
     }

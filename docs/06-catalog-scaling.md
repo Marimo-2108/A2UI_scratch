@@ -55,7 +55,7 @@ for caching + prune by screen. Measure again with the same method before and aft
 ## Follow-up: how does the agent get its copy in design B? (verified)
 The copy is GENERATED, not hand-written, from the browser's Zod definitions (single source of truth):
 
-    web/src/catalog/statCardApi.ts  --npm run export:caps-->  agent/fixtures/stats-v1.catalog.json
+    Frontend/src/catalog/statCardApi.ts  --npm run export:caps-->  Backend/fixtures/stats-v1.catalog.json
                                                               agent: CatalogConfig.from_path(...)
 
 Other ways to obtain it, for completeness: author the JSON Schema by hand (what some official samples do;

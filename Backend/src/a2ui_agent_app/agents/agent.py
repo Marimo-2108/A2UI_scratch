@@ -18,7 +18,7 @@ def create_agent(config: AgentConfig, instruction: InstructionProvider) -> LlmAg
 
     if config.llm_provider == "gemini":
         if not config.gemini_api_key.get_secret_value():
-            raise RuntimeError("GEMINI_API_KEY is not set (put it in agent/.env).")
+            raise RuntimeError("GEMINI_API_KEY is not set (put it in Backend/.env).")
         model = Gemini(
             model=config.gemini_model,
             client=genai.Client(
@@ -40,9 +40,9 @@ def create_agent(config: AgentConfig, instruction: InstructionProvider) -> LlmAg
         )
     else:
         if not config.openai_api_key.get_secret_value():
-            raise RuntimeError("OPENAI_API_KEY is not set (put it in agent/.env).")
+            raise RuntimeError("OPENAI_API_KEY is not set (put it in Backend/.env).")
         if not config.openai_model:
-            raise RuntimeError("OPENAI_MODEL is not set (put it in agent/.env).")
+            raise RuntimeError("OPENAI_MODEL is not set (put it in Backend/.env).")
         if config.openai_reasoning_effort:
             # Reasoning models reject custom temperature; send effort instead.
             model = LiteLlm(

@@ -2,7 +2,7 @@
 
 ## Run it
 ```
-cd agent
+cd Backend
 copy .env.example .env      # then set GEMINI_API_KEY (never commit .env)
 uv run a2ui-agent           # needs an API key in .env
 uv run python tests/manual/try_agent.py "a small signup form"   # poke it without a browser
@@ -36,7 +36,7 @@ is the safety net between a probabilistic model and your UI. Example from the pr
 |---|---|---|
 | Protocol version | SDK + web lib validate `"version": "v0.9"`; passing `v0.9.1` to `create_processor` raises. Spec doc is ahead of the libraries. | Whole stack uses `v0.9`; extension URI `.../a2ui/v0.9` |
 | MIME type | SDK labels v0.9 parts `application/json+a2ui` (old name) | use SDK `create_a2ui_part`; web accepts both |
-| SDK on PyPI | `a2ui-agent-sdk` 0.8.0 on PyPI predates `A2uiGenerator`/`processor` that the docs describe | install both packages from the public GitHub repo, **pinned to a commit** (git dependency in `agent/pyproject.toml`). Needs access to github.com; no local clone needed. |
+| SDK on PyPI | `a2ui-agent-sdk` 0.8.0 on PyPI predates `A2uiGenerator`/`processor` that the docs describe | install both packages from the public GitHub repo, **pinned to a commit** (git dependency in `Backend/pyproject.toml`). Needs access to github.com; no local clone needed. |
 | TLS | `CERTIFICATE_VERIFY_FAILED: self-signed certificate in chain` for google domains only | `truststore` -> Python uses the OS cert store. Verification stays ON. |
 | Transient 503 | "model is currently experiencing high demand" (varies per model, per hour) | `HttpRetryOptions` backoff (429/5xx), and pick a model that is serving |
 | Latency | default ~43s, MEDIUM ~24s, **LOW ~5-12s**, same valid UI. `MINIMAL` is rejected by 3.8-flash. | `GEMINI_THINKING_LEVEL=LOW` default (`bench_thinking.py` reproduces the numbers) |
@@ -50,10 +50,10 @@ is the safety net between a probabilistic model and your UI. Example from the pr
 
 ## Files
 (Original Milestone 4 layout; see "Addendum: Google ADK" below for where these live now.)
-- `agent/config.py`        all settings from env / `.env` (+ truststore)
-- `agent/gemini_brain.py`  prompt, Gemini call, validate + retry loop, per-context memory
-- `agent/executor.py`      one flow for both brains; negotiation -> brain -> status-updates
-- `agent/try_agent.py`     CLI client; `agent/bench_thinking.py` latency benchmark
+- `Backend/config.py`        all settings from env / `.env` (+ truststore)
+- `Backend/gemini_brain.py`  prompt, Gemini call, validate + retry loop, per-context memory
+- `Backend/executor.py`      one flow for both brains; negotiation -> brain -> status-updates
+- `Backend/try_agent.py`     CLI client; `Backend/bench_thinking.py` latency benchmark
 
 ## Known limits (on purpose, for now)
 - Wait-for-full-response: the UI appears all at once after ~5-12s. The SDK has an incremental
@@ -62,13 +62,13 @@ is the safety net between a probabilistic model and your UI. Example from the pr
 - Full schema in every prompt (cost + latency).
 
 ## Addendum: provider layer (Gemini or OpenAI)
-`agent/llm.py` is the only file that knows the vendor. Everything else talks to a tiny interface:
+`Backend/llm.py` is the only file that knows the vendor. Everything else talks to a tiny interface:
 `complete(system, messages) -> text`. Choose with `LLM_PROVIDER=gemini|openai` in `.env`.
 `gemini_brain.py` became the vendor-neutral `ui_brain.py`. (`AGENT_MODE` was later removed along with scripted mode.)
 
 Lesson: A2UI is a *format*. Prompt building, validation, retry and the client never changed.
 
-OpenAI setup: add `OPENAI_API_KEY` and `OPENAI_MODEL` to `agent/.env`;
+OpenAI setup: add `OPENAI_API_KEY` and `OPENAI_MODEL` to `Backend/.env`;
 `uv run python tests/manual/list_models.py openai` shows what your key can use. Reasoning models take
 `OPENAI_REASONING_EFFORT` (and reject a custom temperature, so we send one or the other).
 
@@ -95,7 +95,7 @@ OpenAI setup: add `OPENAI_API_KEY` and `OPENAI_MODEL` to `agent/.env`;
 Cause (browser-side error, from the library): the model sent `createSurface` for a surface that is
 already on screen. Two ways that happens: (1) the model ignores the prompt rule; (2) the agent was
 RESTARTED, so its in-RAM memory of the conversation is gone, while the browser still holds the screen.
-Fix in `web/src/App.tsx`: if `createSurface` names a surface the processor already has
+Fix in `Frontend/src/App.tsx`: if `createSurface` names a surface the processor already has
 (`processor.getSurface(id)`), skip it and log "ignored duplicate createSurface" in the inspector;
 the updateComponents / updateDataModel that follow still apply. The official React shell does the same.
 Verified against the real library: a 2nd createSurface throws, getSurface detects it, updates still apply.
@@ -111,7 +111,7 @@ The backend is an installable `src/` package with one `agents/` folder and flat 
 There is no API folder, context-provider Protocol or nested agent hierarchy. The LLM side is
 a Google ADK `LlmAgent`; A2A, negotiation, validation/retry and surface repair are retained.
 
-| Before | Now (`agent/src/a2ui_agent_app/`) |
+| Before | Now (`Backend/src/a2ui_agent_app/`) |
 |---|---|
 | `llm.py` (own Gemini/OpenAI clients) | `agents/agent.py`: `create_agent()` builds an ADK `LlmAgent` on `Gemini` or `LiteLlm` (`openai/<model>`) |
 | `ROLE` + `RULES` in `ui_brain.py` | `agents/system-prompt.txt` (ADK `static_instruction`) |

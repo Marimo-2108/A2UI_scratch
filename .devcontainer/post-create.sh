@@ -5,7 +5,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # Named volumes are created root-owned; hand them to the dev user.
-sudo chown -R "$(id -u):$(id -g)" "$ROOT/agent/.venv" "$ROOT/web/node_modules"
+sudo chown -R "$(id -u):$(id -g)" "$ROOT/Backend/.venv" "$ROOT/Frontend/node_modules"
 
 # uv (Python package manager used by this project)
 if ! command -v uv >/dev/null 2>&1; then
@@ -14,20 +14,20 @@ fi
 export PATH="$HOME/.local/bin:$PATH"
 
 # Agent deps (two A2UI packages are fetched from GitHub, pinned to a commit)
-cd "$ROOT/agent"
+cd "$ROOT/Backend"
 [ -f .env ] || cp .env.example .env
 uv sync
 
 # Web deps
-cd "$ROOT/web"
+cd "$ROOT/Frontend"
 npm install
 
 cat <<'EOF'
 
 Ready. Open two terminals:
-  agent:  cd agent && uv run a2ui-agent             (http://localhost:10010)
-  web:    cd web && npm run dev -- --host         (http://localhost:5173)
+  Backend:  cd Backend && uv run a2ui-agent             (http://localhost:10010)
+  Frontend: cd Frontend && npm run dev -- --host         (http://localhost:5173)
 
 Set GEMINI_API_KEY (or LLM_PROVIDER=openai + OPENAI_API_KEY / OPENAI_MODEL)
-in agent/.env; the agent needs an API key to start.
+in Backend/.env; the agent needs an API key to start.
 EOF

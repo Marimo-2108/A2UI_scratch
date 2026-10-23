@@ -18,7 +18,7 @@ EXT = "https://a2ui.org/a2a-extension/a2ui/v0.9"
 CATALOG = "https://a2ui.org/specification/v0_9/catalogs/basic/catalog.json"
 
 
-FIXTURES = Path(__file__).resolve().parents[2] / "fixtures"  # agent/fixtures
+FIXTURES = Path(__file__).resolve().parents[2] / "fixtures"  # Backend/fixtures
 BASIC_CAPS = {"v0.9": {"supportedCatalogIds": [CATALOG]}}
 
 

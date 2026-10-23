@@ -29,7 +29,7 @@ uv run python tests/manual/try_agent.py "a small signup form"
 uv run adk web tests/manual                   # the bare ADK agent in ADK's dev UI
 ```
 
-Run these commands from `agent/` so settings can read `.env`. The server always uses an LLM;
+Run these commands from `Backend/` so settings can read `.env`. The server always uses an LLM;
 an API key is required. The tests use a fake model and need neither credentials nor network access.
 
 ## Follow one request

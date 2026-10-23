@@ -17,14 +17,14 @@ Security model made concrete: the model can only request components the client a
 with property values the schema allows. It cannot ship code.
 
 ## What we built
-- `web/src/catalog/statCardApi.ts`  API half: `name` + Zod schema (`.describe()` text goes to the model)
-- `web/src/catalog/StatCard.tsx`    implementation half (`createComponentImplementation`)
-- `web/src/catalog/myCatalog.ts`    `Catalog(id, '0.9', [...basic, StatCard], ...)` under OUR catalog id
-- `web/src/App.tsx`                processor uses `myCatalog`; capabilities come from
+- `Frontend/src/catalog/statCardApi.ts`  API half: `name` + Zod schema (`.describe()` text goes to the model)
+- `Frontend/src/catalog/StatCard.tsx`    implementation half (`createComponentImplementation`)
+- `Frontend/src/catalog/myCatalog.ts`    `Catalog(id, '0.9', [...basic, StatCard], ...)` under OUR catalog id
+- `Frontend/src/App.tsx`                processor uses `myCatalog`; capabilities come from
                                     `processor.getRendererCapabilities({versions, includeInlineCatalogs:true})`
 - `agent`: `A2uiGenerator(..., accepts_inline_catalogs=True)`; agent card says `acceptsInlineCatalogs: true`
-- `web/scripts/export-capabilities.mjs` + `npm run export:caps` -> `agent/fixtures/inline_caps.json`
-- `agent/tests/manual/try_agent.py --caps "prompt"` sends that catalog from the command line
+- `Frontend/scripts/export-capabilities.mjs` + `npm run export:caps` -> `Backend/fixtures/inline_caps.json`
+- `Backend/tests/manual/try_agent.py --caps "prompt"` sends that catalog from the command line
 
 ## Results (same prompt: "a small KPI dashboard: revenue, active users, churn")
 | Client sends | catalogId chosen by the model | Result |
@@ -50,7 +50,7 @@ unknown component `Banana` is REJECTED; a correct StatCard is accepted.
 
 ## Try it
 ```
-cd web && npm run export:caps
+cd Frontend && npm run export:caps
 cd ../agent && uv run python tests/manual/try_agent.py --caps "a KPI dashboard for an online shop"
 ```
 In the browser: "a KPI dashboard for an online shop" -> New conversation.
