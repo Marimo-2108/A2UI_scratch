@@ -6,3 +6,6 @@ __pycache__/
 *.pyc
 
 /ref_workspaces/
+
+# Locally supplied organization CA certificate
+.devcontainer/cloudflare-root.crt

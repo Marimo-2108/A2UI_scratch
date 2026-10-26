@@ -4,9 +4,6 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-# Named volumes are created root-owned; hand them to the dev user.
-sudo chown -R "$(id -u):$(id -g)" "$ROOT/Backend/.venv" "$ROOT/Frontend/node_modules"
-
 # uv (Python package manager used by this project)
 if ! command -v uv >/dev/null 2>&1; then
   pip install --user --no-cache-dir uv
