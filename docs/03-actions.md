@@ -1,37 +1,40 @@
-# Milestone 3: the round trip (user action -> agent -> UI update)
+# The round trip: user action -> agent -> UI update
 
-> **Removed:** the scripted `submit_name` / `greeting_update()` reply described here was deleted with
-> the scripted agent. Actions now become `USER_ACTION {...}` text for the LLM (see Milestone 4);
-> the client side of the round trip is unchanged.
+The original scripted action handler and A2A transport have been removed. Actions now travel
+through AG-UI, while the A2UI action payload and renderer behavior remain the same.
 
-## The loop in one picture
-```
- user types a name, clicks Button
-        |
-        v   (library calls our action handler with name/surfaceId/context)
- client wraps it in a DataPart  ------ A2A message/stream ------>  agent
-   { version, action: { name:"submit_name", context:{ name:"Vijaka" } } }
-                                                                      |
- client feeds reply into the same MessageProcessor  <---- SSE --------+
-   { updateDataModel: path:"/greeting", value:"Nice to meet you, Vijaka!" }
-        |
-        v
- the Text bound to /greeting redraws. No component was re-sent.
+## The loop
+
+```text
+User edits a field and clicks an A2UI Button
+  -> MessageProcessor resolves action bindings and invokes our action handler
+  -> POST / with RunAgentInput:
+       same threadId, new runId
+       user message describing the action
+       forwardedProps.a2uiAction = {version: "v0.9", action: {...}}
+       forwardedProps.a2uiClientCapabilities = renderer capabilities
+  -> executor validates/extracts the action and converts it to USER_ACTION {...}
+  -> ADK continues the existing conversation and generates validated A2UI
+  -> CUSTOM {name: "a2ui", value: <A2UI message>} events
+  -> the same MessageProcessor updates the existing screen
+  -> RUN_FINISHED (or RUN_ERROR on failure)
 ```
 
 ## Key ideas
-- The **button's JSON** decides what is sent: `action.event.name` + `context`.
-  `context` values can be `{ "path": "/name" }`, so the library fills in what the user typed
-  before calling our handler.
-- Actions go the SAME way as any message (A2A `message/stream`), same `contextId`
-  (= same conversation), same MIME type. Only the payload differs.
-- The agent is **stateless** here: the reply is built only from the action it received.
-- Updating ONE data path is the cheapest way to change the UI. That's the payoff of
-  separating structure from data.
 
-## Files changed
-- `Frontend/src/App.tsx`  `actionPart()` + `run()`; action handler sends to the agent
-- `Backend/src/a2ui_agent_app/executor.py`  reads the action DataPart
+- The button's `action.event.name` and `context` define the action. Context values may
+  reference data paths; the renderer resolves those bindings before calling our handler.
+- The action envelope preserves `name`, `surfaceId`, `sourceComponentId`, `timestamp` and
+  `context`. The backend turns the action's name, surface, source and context into model text.
+- Actions and text prompts use the same AG-UI endpoint. There is no DataPart or MIME marker.
+- A follow-up keeps the existing thread, ADK history and rendered surfaces. A new conversation
+  resets the client and screen and uses a new thread.
+- Overlapping runs are rejected rather than racing to update the same session.
+- `updateDataModel` can update a single bound data path without resending components.
 
-## Things to try
-- In the inspector, compare the outgoing action row with the incoming update rows.
+## Implementation
+
+- [App.tsx](../Frontend/src/App.tsx): action handler and renderer integration.
+- [AG-UI client](../Frontend/src/agui/client.ts): request, history and event handling.
+- [executor.py](../Backend/src/a2ui_agent_app/executor.py): structured action validation and execution.
+- [Migration record](./07-agui-migration.md): complete wire examples and verification.

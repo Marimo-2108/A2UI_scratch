@@ -1,7 +1,11 @@
 # Milestone 2: A2UI over A2A (scripted agent)
 
+> **Historical:** A2A has been replaced by AG-UI. The endpoint, extension header,
+> agent card and client described below no longer exist in the live app.
+> See [the AG-UI migration record](./07-agui-migration.md) for the current wire contract.
+
 > **Removed:** the scripted agent (`AGENT_MODE=scripted`, fixed welcome card) was deleted in a later
-> cleanup. The agent always uses the LLM now (Milestone 4). The transport notes below still apply.
+> cleanup. The agent always uses the LLM now (Milestone 4).
 
 ## Run it
 ```

@@ -1,4 +1,4 @@
-"""The UI agent on its own, for the ADK dev UI / CLI (no A2A server, no browser renderer):
+"""The UI agent on its own, for the ADK dev UI / CLI (no AG-UI server, no browser renderer):
 
     cd Backend && uv run adk web tests/manual      # pick "ui_agent"
     cd Backend && uv run adk run tests/manual/ui_agent

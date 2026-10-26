@@ -14,7 +14,6 @@ from pathlib import Path
 import httpx
 
 URL = os.getenv("AGENT_URL", "http://localhost:10010/")  # override to test another instance
-EXT = "https://a2ui.org/a2a-extension/a2ui/v0.9"
 CATALOG = "https://a2ui.org/specification/v0_9/catalogs/basic/catalog.json"
 
 
@@ -30,35 +29,41 @@ def load_caps():
 CAPS = BASIC_CAPS  # replaced by main when --caps is passed
 
 
-def stream(parts, context_id=None):
-    msg = {
-        "kind": "message",
-        "messageId": str(uuid.uuid4()),
-        "role": "user",
-        "parts": parts,
-        "metadata": {"a2uiClientCapabilities": CAPS},
+def stream(text, thread_id=None):
+    thread_id = thread_id or str(uuid.uuid4())
+    body = {
+        "threadId": thread_id,
+        "runId": str(uuid.uuid4()),
+        "protocolVersion": "1.0.0",
+        "messages": [{"id": str(uuid.uuid4()), "role": "user", "content": text}],
+        "forwardedProps": {"a2uiClientCapabilities": CAPS},
     }
-    if context_id:
-        msg["contextId"] = context_id
-    body = {"jsonrpc": "2.0", "id": 1, "method": "message/stream", "params": {"message": msg}}
     t0 = time.time()
     out = []
-    with httpx.stream("POST", URL, json=body, headers={"X-A2A-Extensions": EXT}, timeout=120) as r:
+    finished = False
+    with httpx.stream("POST", URL, json=body, headers={"Accept": "text/event-stream"}, timeout=120) as r:
+        r.raise_for_status()
         for line in r.iter_lines():
             if not line.startswith("data:"):
                 continue
-            res = json.loads(line[5:])["result"]
-            ctx = res.get("contextId", context_id)
-            status = res.get("status", {})
-            for p in (status.get("message") or {}).get("parts", []):
-                if p["kind"] == "text":
-                    print(f"  +{time.time()-t0:5.1f}s [{status.get('state')}] text: {p['text'][:140]}")
-                else:
-                    keys = [k for k in p["data"] if k != "version"]
-                    print(f"  +{time.time()-t0:5.1f}s [{status.get('state')}] A2UI {keys}")
-                    out.append(p["data"])
-            context_id = ctx
-    return context_id, out
+            event = json.loads(line[5:])
+            kind = event["type"]
+            if kind == "RUN_ERROR":
+                raise RuntimeError(event["message"])
+            if kind == "TEXT_MESSAGE_CONTENT":
+                print(f"  +{time.time()-t0:5.1f}s text: {event['delta'][:140]}")
+            elif kind == "CUSTOM" and event["name"] == "a2ui":
+                message = event["value"]
+                keys = [k for k in message if k != "version"]
+                print(f"  +{time.time()-t0:5.1f}s A2UI {keys}")
+                out.append(message)
+            else:
+                print(f"  +{time.time()-t0:5.1f}s {kind}")
+            if kind == "RUN_FINISHED":
+                finished = True
+    if not finished:
+        raise RuntimeError("AG-UI stream ended before RUN_FINISHED.")
+    return thread_id, out
 
 
 if __name__ == "__main__":
@@ -73,8 +78,8 @@ if __name__ == "__main__":
         CAPS = {"v0.9": {"supportedCatalogIds": [args[1]]}}
         print("advertising catalog id only:", args[1])
         args = args[2:]
-    ctx, msgs = stream([{"kind": "text", "text": args[0]}])
-    print("contextId:", ctx)
+    ctx, msgs = stream(args[0])
+    print("threadId:", ctx)
     if len(args) > 1:
         json.dump(msgs, open(args[1], "w"), indent=2)
         print("saved", args[1])

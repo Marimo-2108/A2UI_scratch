@@ -1,5 +1,9 @@
 # Milestone 4: Gemini decides the UI
 
+> The original observations below predate the ADK and AG-UI migrations. See
+> [Current layout](#current-layout-google-adk-simplified-for-learning) and
+> [the AG-UI migration record](./07-agui-migration.md) for the live implementation.
+
 ## Run it
 ```
 cd Backend
@@ -109,15 +113,16 @@ Known limit: after an agent restart a Follow-up has no history. Fix later by per
 ## Current layout: Google ADK, simplified for learning
 The backend is an installable `src/` package with one `agents/` folder and flat server modules.
 There is no API folder, context-provider Protocol or nested agent hierarchy. The LLM side is
-a Google ADK `LlmAgent`; A2A, negotiation, validation/retry and surface repair are retained.
+a Google ADK `LlmAgent`; negotiation, validation/retry and surface repair are retained.
+The browser transport is now AG-UI; see [the migration record](./07-agui-migration.md).
 
 | Before | Now (`Backend/src/a2ui_agent_app/`) |
 |---|---|
-| `llm.py` (own Gemini/OpenAI clients) | `agents/agent.py`: `create_agent()` builds an ADK `LlmAgent` on `Gemini` or `LiteLlm` (`openai/<model>`) |
+| `llm.py` (own Gemini/OpenAI clients) | `agents/agent.py`: `create_agent()` builds an ADK `LlmAgent` on `LiteLlm` (`azure/<deployment>`, Azure only) |
 | `ROLE` + `RULES` in `ui_brain.py` | `agents/system-prompt.txt` (ADK `static_instruction`) |
 | `processor.prompt_snippet` in the system prompt | `runner.py`: a callable reads the schema from invocation-local `temp:` state |
-| `histories` dict | ADK `Runner` + `InMemorySessionService`, session id = A2A `contextId` |
-| `config.py` (dataclass + `os.getenv`) | `agents/config.py` for agent settings; `settings.py` adds server settings, preserving env var names |
+| `histories` dict | ADK `Runner` + `InMemorySessionService`, session id = AG-UI `threadId` |
+| `config.py` (dataclass + `os.getenv`) | `agents/config.py` for agent settings; `settings.py` adds server settings |
 | `ui_brain.py` validate/retry loop | `runner.py` (drives the ADK runner) |
 | `repair_surfaces`, `action_to_text`, `a2ui_ext.py` | `a2ui.py` |
 | `executor.py`, `server.py`, `script.py` | `executor.py`, `server.py` (`uv run a2ui-agent`); scripted mode was removed |
@@ -129,4 +134,6 @@ Behaviour notes:
   gpt-5.4-nano matched the old code in a side-by-side run.
 - Rejected attempts and the correction messages now stay in the ADK session history (before, only
   the successful turn was kept). The model sees its own mistake on later turns; costs more tokens.
-- `OPENAI_*` now goes through LiteLLM (`timeout`, `num_retries=3`, `reasoning_effort` or temperature).
+- Gemini/OpenAI support was removed; the model is configured as one LiteLLM config
+  (`LLM={"model_name": "azure/...", "provider_args": {...}}`, optional `GENERATE_CONTENT`),
+  as in [adk-openui-example](https://github.com/ksachdeva/adk-openui-example).

@@ -1,11 +1,22 @@
-"""Agent settings from environment variables / .env. Existing variable names are preserved."""
+"""Agent settings from environment variables / .env. Azure-hosted models only, via LiteLLM."""
 
 import os
-from typing import Literal
+from typing import Any
 
-from pydantic import SecretStr, field_validator
+from google.genai import types as genai_types
+from pydantic import BaseModel, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+AZURE_PREFIXES = ("azure/", "azure_ai/")
+
+
+class LiteLlmConfig(BaseModel):
+    """Passed straight to ADK's LiteLlm: ``LiteLlm(model=model_name, **provider_args)``."""
+
+    # LiteLLM model string, e.g. "azure/<deployment-name>".
+    model_name: str
+    # api_key, api_base, api_version, timeout, reasoning_effort, ... Kept out of repr (holds the key).
+    provider_args: dict[str, Any] = Field(default_factory=dict, repr=False)
 
 class AgentConfig(BaseSettings):
     model_config = SettingsConfigDict(
@@ -14,24 +25,8 @@ class AgentConfig(BaseSettings):
         extra="ignore",
     )
 
-    llm_provider: Literal["gemini", "openai"] = "gemini"
-    gemini_api_key: SecretStr = SecretStr("")
-    gemini_model: str = "gemini-3.6-flash"
-    gemini_thinking_level: Literal["MINIMAL", "LOW", "MEDIUM", "HIGH"] = "LOW"
-    openai_api_key: SecretStr = SecretStr("")
-    openai_model: str = ""
-    openai_reasoning_effort: str = ""
-    # The GEMINI_ prefix is historical; these two settings apply to both providers.
-    gemini_temperature: float = 0.3
-    gemini_max_retries: int = 2
-    llm_timeout_s: int = 60
-
-    @field_validator("llm_provider", "openai_reasoning_effort", mode="before")
-    @classmethod
-    def _lowercase(cls, value: str) -> str:
-        return value.lower()
-
-    @field_validator("gemini_thinking_level", mode="before")
-    @classmethod
-    def _uppercase(cls, value: str) -> str:
-        return value.upper()
+    # LLM={"model_name": "azure/...", "provider_args": {"api_key": ..., "api_base": ..., ...}}
+    llm: LiteLlmConfig | None = None
+    # GENERATE_CONTENT={"temperature": 0.3}; leave unset for reasoning models (they reject temperature).
+    generate_content: genai_types.GenerateContentConfig | None = None
+    llm_max_retries: int = 2

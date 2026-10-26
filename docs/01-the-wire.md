@@ -27,6 +27,8 @@
 - `basicCatalog` is runtime-fine but needs `MessageProcessor<ReactCatalogComponent>` to typecheck.
 - The published `@a2ui/react` README is out of sync with the code. Trust the source.
 
-## Open questions for Milestone 2
+## Historical questions for Milestone 2
 - How does A2UI ride on A2A (which Part type, which metadata keys)?
 - How does the client advertise its supported catalogs to the agent?
+
+The live app now uses AG-UI rather than A2A; see [the migration record](./07-agui-migration.md).

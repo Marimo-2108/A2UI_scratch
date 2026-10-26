@@ -7,7 +7,7 @@ from .agents.config import AgentConfig
 
 class Settings(AgentConfig):
     agent_host: str = "localhost"
-    # The dev container binds to 0.0.0.0, while the advertised URL still uses agent_host.
+    # The dev container overrides the bind address without changing the local default host.
     agent_bind_host: str = ""
     agent_port: int = 10010
     web_origin_regex: str = r"http://localhost:\d+"

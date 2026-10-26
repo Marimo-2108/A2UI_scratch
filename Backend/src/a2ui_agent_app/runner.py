@@ -1,14 +1,14 @@
-"""Negotiate a catalog -> run the ADK agent -> validate/retry -> yield A2UI parts.
+"""Negotiate a catalog -> run the ADK agent -> validate/retry -> yield text or A2UI.
 
-ADK sessions hold conversation history, keyed by A2A contextId. Both history and the record of
+ADK sessions hold conversation history, keyed by AG-UI threadId. Both history and the record of
 surfaces already sent to the client live in memory; restarting the server forgets them.
 """
 
 import logging
 from collections.abc import AsyncIterator
+from contextlib import aclosing
 from typing import Any
 
-from a2a.types import Part, TextPart
 from a2ui.core.exceptions import A2uiValidationError
 from a2ui.inference_formats import to_message_dicts
 from a2ui.parser import A2uiPart
@@ -18,7 +18,7 @@ from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai import types as genai_types
 
-from .a2ui import a2ui_part, make_generator, repair_surfaces
+from .a2ui import make_generator, repair_surfaces
 from .agents import AgentConfig, create_agent
 
 log = logging.getLogger(__name__)
@@ -38,17 +38,17 @@ async def catalog_instruction(context: ReadonlyContext) -> str:
 
 class UiRunner:
     def __init__(self, config: AgentConfig) -> None:
-        self.max_retries = config.gemini_max_retries
+        self.max_retries = config.llm_max_retries
         self.generator = make_generator()
         self.agent = create_agent(config, catalog_instruction)
-        # contextId -> conversation so far (in RAM; restart = forgotten).
+        # threadId -> conversation so far (in RAM; restart = forgotten).
         self.runner = Runner(
             app_name=_APP_NAME,
             agent=self.agent,
             session_service=InMemorySessionService(),
             auto_create_session=True,
         )
-        # contextId -> surfaceIds we have DELIVERED to that client (not merely generated).
+        # threadId -> surfaceIds we have DELIVERED to that client (not merely generated).
         self.surfaces: dict[str, set[str]] = {}
 
     @property
@@ -60,23 +60,27 @@ class UiRunner:
         """Run the agent for one user message; return the model's final (non-thought) text."""
         message = genai_types.Content(role="user", parts=[genai_types.Part(text=text)])
         chunks: list[str] = []
-        async for event in self.runner.run_async(
-            user_id=_USER_ID,
-            session_id=context_id,
-            new_message=message,
-            # temp: state belongs to this invocation, not to the remembered conversation.
-            state_delta={_CATALOG_PROMPT: catalog_prompt},
-        ):
-            if event.error_code:
-                raise RuntimeError(f"LLM error {event.error_code}: {event.error_message}")
-            if event.is_final_response() and event.content and event.content.parts:
-                chunks += [p.text for p in event.content.parts if p.text and not p.thought]
+        async with aclosing(
+            self.runner.run_async(
+                user_id=_USER_ID,
+                session_id=context_id,
+                new_message=message,
+                # temp: state belongs to this invocation, not to the remembered conversation.
+                state_delta={_CATALOG_PROMPT: catalog_prompt},
+            )
+        ) as events:
+            # Close in this task on errors/cancellation so ADK detaches its tracing context here.
+            async for event in events:
+                if event.error_code:
+                    raise RuntimeError(f"LLM error {event.error_code}: {event.error_message}")
+                if event.is_final_response() and event.content and event.content.parts:
+                    chunks += [p.text for p in event.content.parts if p.text and not p.thought]
         return "".join(chunks)
 
     async def respond(
         self, context_id: str, user_input: str, client_caps: dict[str, Any]
-    ) -> AsyncIterator[Part]:
-        """Yield A2A Parts: TextParts for progress/chat and DataParts for A2UI messages."""
+    ) -> AsyncIterator[str | dict[str, Any]]:
+        """Yield text for progress/chat and dictionaries for validated A2UI messages."""
         # NEGOTIATION, SDK style: given what the client can render, which catalogs are active?
         # Raises A2uiValidationError if there is no overlap.
         processor = self.generator.create_processor(client_caps)
@@ -94,7 +98,7 @@ class UiRunner:
                 log.warning("attempt %d failed validation: %s", attempt + 1, e)
                 if attempt == self.max_retries:
                     raise
-                yield Part(root=TextPart(text=f"(model output invalid, retrying {attempt + 1}/{self.max_retries}...)"))
+                yield f"(model output invalid, retrying {attempt + 1}/{self.max_retries}...)"
                 text_in = (
                     "Your previous A2UI JSON failed validation:\n"
                     f"{e}\n\n"
@@ -120,7 +124,7 @@ class UiRunner:
                 log.warning("repaired model output: %s", n)
 
             for t in texts:
-                yield Part(root=TextPart(text=t))
+                yield t
             for msg in wire:
-                yield a2ui_part(msg)
+                yield msg
             return

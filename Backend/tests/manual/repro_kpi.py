@@ -11,7 +11,7 @@ N = int(sys.argv[1]) if len(sys.argv) > 1 else 4
 bad = 0
 for i in range(1, N + 1):
     print(f"===== run {i}")
-    _, msgs = try_agent.stream([{"kind": "text", "text": "a KPI dashboard: monthly revenue, active users, churn"}])
+    _, msgs = try_agent.stream("a KPI dashboard: monthly revenue, active users, churn")
     created, problems = set(), []
     for m in msgs:
         kind = next(k for k in m if k != "version")

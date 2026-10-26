@@ -1,20 +1,21 @@
 # A2UI Scratch
 
-A learning/prototyping project for [A2UI](https://a2ui.org) (agent-to-UI). An AI agent streams declarative UI over the A2A protocol, and a React app renders it with a custom component catalog.
+A learning/prototyping project for [A2UI](https://a2ui.org) (agent-to-UI). An AI agent streams declarative UI over [AG-UI](https://docs.ag-ui.com), and a React app renders it with a custom component catalog.
 
-- [Backend/](./Backend/README.md) – Python A2A server. A Google ADK agent (Gemini or OpenAI) decides the UI.
+- [Backend/](./Backend/README.md) – Python AG-UI server. A Google ADK agent (Azure-hosted model via LiteLLM) decides the UI.
 - [Frontend/](./Frontend/README.md) – React + Vite client with a wire inspector and a custom catalog.
 - [docs/](./docs/) – Learning notes and historical experiments; start with the current workflow below.
+- [AG-UI migration](./docs/07-agui-migration.md) – Progress, wire contract, changes, removals and verification.
 
 ## Follow the workflow
 
 ```text
 React prompt
-  -> A2A request (including the client's component catalog)
+  -> AG-UI RunAgentInput (including the client's component catalog in forwardedProps)
   -> ADK agent + system prompt + catalog schema
   -> model returns A2UI JSON
   -> validate, retry if needed, repair surface messages
-  -> A2A response stream
+  -> AG-UI SSE events (text + CUSTOM "a2ui" messages)
   -> React MessageProcessor -> rendered UI
   -> button action -> another request in the same conversation
 ```
@@ -22,9 +23,9 @@ React prompt
 Read the files in this order:
 
 1. [Frontend/src/App.tsx](./Frontend/src/App.tsx): prompt, conversation and rendered surfaces.
-2. [Frontend/src/a2a/client.ts](./Frontend/src/a2a/client.ts): send a request and read the SSE response.
+2. [Frontend/src/agui/client.ts](./Frontend/src/agui/client.ts): official AG-UI HTTP client, events and history.
 3. [Backend/server.py](./Backend/src/a2ui_agent_app/server.py): backend entry point and HTTP app.
-4. [Backend/executor.py](./Backend/src/a2ui_agent_app/executor.py): incoming request to outgoing task updates.
+4. [Backend/executor.py](./Backend/src/a2ui_agent_app/executor.py): incoming run to outgoing AG-UI events.
 5. [Backend/runner.py](./Backend/src/a2ui_agent_app/runner.py): catalog negotiation, ADK sessions and validation/retry.
 6. [agents/agent.py](./Backend/src/a2ui_agent_app/agents/agent.py) and
    [system-prompt.txt](./Backend/src/a2ui_agent_app/agents/system-prompt.txt): model selection and instructions.
@@ -41,7 +42,7 @@ Only [Docker](https://www.docker.com/) and VS Code/Cursor with the Dev Container
 The [Dockerfile](.devcontainer/Dockerfile) installs the organization's Cloudflare Gateway CA into the system trust store during the image build, before editor extensions or dependency installation run. Before the first build, place your IT-approved PEM-encoded CA certificate at `.devcontainer/cloudflare-root.crt`. This local file is Git-ignored and required by the build; use your organization's certificate, not one copied from another repository. Node uses the additional CA, and `UV_SYSTEM_CERTS=true` enables system certificate trust for uv. There is no `SSL_CERT_FILE` override; Python libraries that use their own CA bundles may need library-specific configuration.
 
 1. Open this folder and run **Dev Containers: Reopen in Container**. First build installs everything (`.devcontainer/post-create.sh`) and creates `Backend/.env` from the example.
-2. Edit `Backend/.env` and set an API key (`GEMINI_API_KEY`, or `OPENAI_API_KEY` + `OPENAI_MODEL` with `LLM_PROVIDER=openai`).
+2. Edit `Backend/.env` and fill in `LLM` (Azure deployment as `azure/<deployment>`, plus `api_key`, `api_base`, `api_version` in `provider_args`).
 3. In two terminals: `cd Backend && uv run a2ui-agent` and `cd Frontend && npm run dev`.
 4. Open http://localhost:5173. VS Code detects listening server processes and forwards their ports automatically; check the Ports panel for the actual local addresses if a port is already occupied. Set `VITE_AGENT_URL` to the backend's forwarded address if it is not localhost:10010, then restart Vite.
 
@@ -66,7 +67,9 @@ uv sync
 uv run a2ui-agent         # listens on http://localhost:10010
 ```
 
-In `.env`, set `GEMINI_API_KEY` (or `OPENAI_API_KEY`, `OPENAI_MODEL` and `LLM_PROVIDER=openai`). An API key is required. Never commit `.env`.
+In `.env`, set `LLM` to a LiteLLM config for your Azure deployment, e.g.
+`LLM={"model_name": "azure/<deployment>", "provider_args": {"api_key": "...", "api_base": "https://<resource>.openai.azure.com/", "api_version": "2024-12-01-preview"}}`.
+Only Azure models (`azure/` or `azure_ai/`) are accepted and an API key is required. Never commit `.env`.
 
 Quick check without a browser:
 
@@ -93,4 +96,13 @@ cd Backend
 uv run pytest
 ```
 
-See `docs/` for how it all works, starting with `00-glossary.md`.
+```bash
+cd Frontend
+npm test
+npm run build
+npm run lint
+```
+
+Tests use a fake LLM or mock HTTP streams; they do not need API keys.
+See [the glossary](./docs/00-glossary.md) and [the migration record](./docs/07-agui-migration.md)
+for the current protocol. Earlier milestone notes are historical where marked.

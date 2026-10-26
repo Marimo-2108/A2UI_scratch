@@ -1,31 +1,25 @@
-"""Which models can my API key use?   uv run python tests/manual/list_models.py [openai|gemini]
+"""Which models can my Azure OpenAI resource use?   uv run python tests/manual/list_models.py
 
-Prints model names only (never the key). Useful because vendors retire/rename models often.
+Uses the LLM provider_args from .env. Prints model names only (never the key).
+Note: these are the models available to the resource; LLM.model_name needs your *deployment* name.
 """
 
-import sys
+from openai import AzureOpenAI
 
 from a2ui_agent_app.settings import Settings
 
 settings = Settings()
 settings.apply_truststore()
+if settings.llm is None:
+    raise SystemExit("LLM is not set (put it in Backend/.env, see .env.example).")
 
-
-def openai_models() -> list[str]:
-    from openai import OpenAI
-
-    return sorted(m.id for m in OpenAI(api_key=settings.openai_api_key.get_secret_value()).models.list())
-
-
-def gemini_models() -> list[str]:
-    from google import genai
-
-    c = genai.Client(api_key=settings.gemini_api_key.get_secret_value())
-    return sorted(m.name.split("/")[-1] for m in c.models.list())
-
-
-which = sys.argv[1] if len(sys.argv) > 1 else settings.llm_provider
-names = openai_models() if which == "openai" else gemini_models()
-print(f"{which}: {len(names)} models")
+args = settings.llm.provider_args
+client = AzureOpenAI(
+    api_key=args.get("api_key"),
+    azure_endpoint=args.get("api_base"),
+    api_version=args.get("api_version"),
+)
+names = sorted(m.id for m in client.models.list())
+print(f"azure: {len(names)} models")
 for n in names:
     print(" ", n)

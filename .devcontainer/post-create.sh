@@ -25,6 +25,6 @@ Ready. Open two terminals:
   Backend:  cd Backend && uv run a2ui-agent             (http://localhost:10010)
   Frontend: cd Frontend && npm run dev -- --host         (http://localhost:5173)
 
-Set GEMINI_API_KEY (or LLM_PROVIDER=openai + OPENAI_API_KEY / OPENAI_MODEL)
-in Backend/.env; the agent needs an API key to start.
+Fill in LLM (Azure deployment + api_key / api_base / api_version)
+in Backend/.env; the agent needs it to start.
 EOF

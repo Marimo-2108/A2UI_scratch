@@ -1,89 +1,97 @@
-"""The A2A AgentExecutor: where an incoming A2A message becomes a stream of A2UI messages.
-
-Flow:
-  1. look at what arrived (text or an A2UI action)
-  2. A2A task bookkeeping
-  3. negotiation: extension header (catalog negotiation happens inside UiRunner)
-  4. ask the brain (the ADK UI agent) and stream each result back as a status-update
-  5. finish with input-required ("done, waiting for the user's next action")
-"""
+"""Map validated AG-UI runs to the transport-independent A2UI/ADK runner."""
 
 import logging
+from collections.abc import AsyncIterator
+from typing import Any, Literal
+from uuid import uuid4
 
-from a2a.server.agent_execution import AgentExecutor, RequestContext
-from a2a.server.events import EventQueue
-from a2a.server.tasks import TaskUpdater
-from a2a.types import DataPart, TaskState
-from a2a.utils import new_agent_parts_message, new_agent_text_message, new_task
+from ag_ui.core import (
+    BaseEvent,
+    CustomEvent,
+    RunAgentInput,
+    RunErrorEvent,
+    RunFinishedEvent,
+    RunStartedEvent,
+    TextMessageContentEvent,
+    TextMessageEndEvent,
+    TextMessageStartEvent,
+)
+from pydantic import BaseModel, ConfigDict, Field
 
-from .a2ui import a2ui_requested, action_to_text, client_capabilities
+from .a2ui import action_to_text
 from .runner import UiRunner
 from .settings import Settings
 
-log = logging.getLogger("executor")
+log = logging.getLogger(__name__)
+
+# Application-level convention, not a built-in AG-UI event name.
+A2UI_EVENT_NAME = "a2ui"
 
 
-class UiExecutor(AgentExecutor):
+class UiAction(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str = Field(min_length=1)
+    surfaceId: str = Field(min_length=1)
+    sourceComponentId: str = Field(min_length=1)
+    timestamp: str
+    context: dict[str, Any] = Field(default_factory=dict)
+
+
+class ActionEnvelope(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    version: Literal["v0.9"]
+    action: UiAction
+
+
+class UiRunProps(BaseModel):
+    """Our application contract inside AG-UI's forwardedProps."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    a2uiClientCapabilities: dict[str, Any] = Field(min_length=1)
+    a2uiAction: ActionEnvelope | None = None
+
+
+def text_events(text: str) -> tuple[BaseEvent, ...]:
+    message_id = str(uuid4())
+    return (
+        TextMessageStartEvent(message_id=message_id, role="assistant"),
+        TextMessageContentEvent(message_id=message_id, delta=text),
+        TextMessageEndEvent(message_id=message_id),
+    )
+
+
+class UiExecutor:
     def __init__(self, settings: Settings) -> None:
         self.runner = UiRunner(settings)
         log.info("llm: %s", self.runner.llm_name)
 
-    async def execute(self, context: RequestContext, event_queue: EventQueue) -> None:
-        msg = context.message
-        assert msg is not None
-
-        # --- 1. what arrived? ------------------------------------------------------------
-        user_text = context.get_user_input()
-        action = next(
-            (
-                p.root.data["action"]
-                for p in msg.parts
-                if isinstance(p.root, DataPart) and "action" in p.root.data
-            ),
-            None,
+    async def execute(
+        self, run: RunAgentInput, props: UiRunProps, user_text: str
+    ) -> AsyncIterator[BaseEvent]:
+        yield RunStartedEvent(
+            thread_id=run.thread_id, run_id=run.run_id, protocol_version="1.0.0"
         )
-        log.info("incoming: text=%r action=%s contextId=%s", user_text, action, msg.context_id)
-
-        # --- 2. A2A task bookkeeping ----------------------------------------------------------
-        task = context.current_task
-        if not task:
-            task = new_task(msg)
-            await event_queue.enqueue_event(task)
-        updater = TaskUpdater(event_queue, task.id, task.context_id)
-
-        async def say(text: str, state: TaskState = TaskState.working, final: bool = False) -> None:
-            await updater.update_status(
-                state, new_agent_text_message(text, task.context_id, task.id), final=final
-            )
-
-        # --- 3. negotiation ---------------------------------------------------------------
-        if not a2ui_requested(context):
-            await say(
-                "I only speak A2UI. Send header X-A2A-Extensions with the A2UI extension URI.",
-                TaskState.completed,
-                final=True,
-            )
-            return
-        # Catalog negotiation is left to the SDK inside UiRunner (it may even accept the client's
-        # INLINE catalog); it fails the task if nothing matches.
-
-        # --- 4. the brain ------------------------------------------------------------------
         try:
-            await say("Thinking...")
-            user_input = action_to_text(action) if action is not None else user_text
-            async for part in self.runner.respond(
-                task.context_id, user_input, client_capabilities(context) or {}
+            for event in text_events("Thinking..."):
+                yield event
+            user_input = (
+                action_to_text(props.a2uiAction.action.model_dump())
+                if props.a2uiAction is not None
+                else user_text
+            )
+            async for item in self.runner.respond(
+                run.thread_id, user_input, props.a2uiClientCapabilities
             ):
-                await updater.update_status(
-                    TaskState.working, new_agent_parts_message([part], task.context_id, task.id)
-                )
-        except Exception as e:  # noqa: BLE001  - report any failure to the client, don't hang
-            log.exception("brain failed")
-            await say(f"Agent error: {type(e).__name__}: {e}", TaskState.failed, final=True)
+                if isinstance(item, str):
+                    for event in text_events(item):
+                        yield event
+                else:
+                    yield CustomEvent(name=A2UI_EVENT_NAME, value=item)
+        except Exception as exc:  # Report failures after HTTP streaming has begun.
+            log.exception("AG-UI run failed: thread=%s run=%s", run.thread_id, run.run_id)
+            yield RunErrorEvent(message=f"Agent error: {type(exc).__name__}: {exc}", code="AGENT_ERROR")
             return
-
-        # --- 5. done; wait for the user's next action -----------------------------------------
-        await say("Done.", TaskState.input_required)
-
-    async def cancel(self, context: RequestContext, event_queue: EventQueue) -> None:
-        raise NotImplementedError("cancel not supported")
+        yield RunFinishedEvent(thread_id=run.thread_id, run_id=run.run_id)

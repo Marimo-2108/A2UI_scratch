@@ -22,25 +22,19 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/dd/d5/51f4ee1bf3b736add42a542d3c8a3fd3fa85f3d36c17972127defc46c26f/a2a_sdk-0.3.26-py3-none-any.whl", hash = "sha256:754e0573f6d33b225c1d8d51f640efa69cbbed7bdfb06ce9c3540ea9f58d4a91", size = 151016, upload-time = "2026-04-09T15:21:12.35Z" },
 ]
 
-[package.optional-dependencies]
-http-server = [
-    { name = "fastapi" },
-    { name = "sse-starlette" },
-    { name = "starlette" },
-]
-
 [[package]]
 name = "a2ui-agent-app"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
-    { name = "a2a-sdk", extra = ["http-server"] },
     { name = "a2ui-agent-sdk" },
     { name = "a2ui-core" },
+    { name = "ag-ui-protocol" },
     { name = "google-adk" },
     { name = "google-genai" },
     { name = "litellm" },
     { name = "pydantic-settings" },
+    { name = "starlette" },
     { name = "truststore" },
     { name = "uvicorn" },
 ]
@@ -52,13 +46,14 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "a2a-sdk", extras = ["http-server"], specifier = ">=0.3.0,<0.4.0" },
     { name = "a2ui-agent-sdk", git = "https://github.com/a2ui-project/a2ui.git?subdirectory=python%2Fa2ui_agent&rev=ce03d005c0575ff6708da583d9e7658a34df2d5d" },
     { name = "a2ui-core", git = "https://github.com/a2ui-project/a2ui.git?subdirectory=python%2Fa2ui_core&rev=ce03d005c0575ff6708da583d9e7658a34df2d5d" },
+    { name = "ag-ui-protocol", specifier = ">=1.0.0,<2.0.0" },
     { name = "google-adk", specifier = "==2.9.2" },
     { name = "google-genai", specifier = ">=2.30.0" },
     { name = "litellm", specifier = ">=1.84,<=1.102.1" },
     { name = "pydantic-settings", specifier = ">=2" },
+    { name = "starlette", specifier = ">=1.3.1,<2" },
     { name = "truststore", specifier = ">=0.10.5" },
     { name = "uvicorn", specifier = ">=0.54.0" },
 ]
@@ -93,6 +88,18 @@ dependencies = [
     { name = "pydantic" },
     { name = "referencing" },
     { name = "regex" },
+]
+
+[[package]]
+name = "ag-ui-protocol"
+version = "1.0.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pydantic" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/57/92/d88fdc7f4648dc38d3d54c595066bb3e63a4c091884ffb2f98272c33eef8/ag_ui_protocol-1.0.0.tar.gz", hash = "sha256:cfebecef2e7bc942cc8a52d908a4ea86a98f631d2ffdc6ec5812bb843eac74fb", size = 30759, upload-time = "2026-09-17T18:31:19.448Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/82/b0/850be4576e6443dc575daa54188d8136ae2b2eca3f19e098e7a088fc9ebc/ag_ui_protocol-1.0.0-py3-none-any.whl", hash = "sha256:0058eaf0522201089d444e430fc35180bc8ad0222cae39e8568b313e8105d9e6", size = 36842, upload-time = "2026-09-17T18:31:18.471Z" },
 ]
 
 [[package]]
@@ -2314,19 +2321,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/a2/87/a6771e1546d97e7e041b6ae58d80074f81b7d5121207425c964ddf5cfdbd/sniffio-1.3.1.tar.gz", hash = "sha256:f4324edc670a0f49750a81b895f35c3adb843cca46f0530f79fc1babb23789dc", size = 20372, upload-time = "2024-02-25T23:20:04.057Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e9/44/75a9c9421471a6c4805dbf2356f7c181a29c1879239abab1ea2cc8f38b40/sniffio-1.3.1-py3-none-any.whl", hash = "sha256:2f6da418d1f1e0fddd844478f41680e794e6051915791a034ff65e5f100525a2", size = 10235, upload-time = "2024-02-25T23:20:01.196Z" },
-]
-
-[[package]]
-name = "sse-starlette"
-version = "3.5.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "anyio" },
-    { name = "starlette" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/e4/be/0123026f719d1a7936f214a88b553bb5701e04ff2511147c1dab0c5035eb/sse_starlette-3.5.0.tar.gz", hash = "sha256:75de713aa8a9441513cc283220826da079d982770965b951e9437720e8bafdb2", size = 36794, upload-time = "2026-09-28T17:48:14.7Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/be/e4/cdda14023c316d71493bc54fdffc3dd006631b88866145c9d3cc33e0f1df/sse_starlette-3.5.0-py3-none-any.whl", hash = "sha256:3e6e1070df3f0f5d9cea81496de92dbb72f6721871d99748ece67441dd8b7997", size = 17407, upload-time = "2026-09-28T17:48:13.228Z" },
 ]
 
 [[package]]
