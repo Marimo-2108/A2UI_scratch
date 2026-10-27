@@ -1,5 +1,9 @@
 # A2A -> AG-UI migration
 
+> **Historical:** The wire contract below (`CUSTOM "a2ui"` events, `forwardedProps` capabilities/actions, surface repair, HTTP 409) describes the first AG-UI version. The backend has since been simplified to the
+> [adk-openui-example](https://github.com/ksachdeva/adk-openui-example) shape (`ag_ui_adk` + the A2UI SDK's
+> `send_a2ui_json_to_client` tool, fixed backend catalog). See [Backend/README.md](../Backend/README.md) for the live flow.
+
 ## Status
 
 The browser/server transport has migrated to AG-UI 1.0 over HTTP/SSE.

@@ -1,9 +1,10 @@
-// Writes the a2uiClientCapabilities this browser would send (incl. our custom catalog as an
-// INLINE JSON Schema) to ../Backend/fixtures/inline_caps.json, so the agent can be tested from
-// the command line:   npm run export:caps  &&  uv run python tests/manual/try_agent.py --caps "a KPI dashboard"
+// Writes the backend's A2UI catalog (basic components + StatCard) to
+// ../Backend/fixtures/stats-v1.catalog.json, GENERATED from the same Zod source the browser uses.
+// The agent validates its UI against this file. Never edit it by hand; re-run
+// `npm run export:caps` after changing a component, then restart the backend.
 //
 // Run with Node's built-in TypeScript support (imports a .ts file directly).
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { writeFileSync } from 'node:fs';
 import { Catalog, MessageProcessor } from '@a2ui/web_core/v0_9';
 import { basicCatalog, BASIC_FUNCTIONS } from '@a2ui/web_core/v0_9/basic_catalog';
 import { statCardApi } from '../src/catalog/statCardApi.ts';
@@ -23,15 +24,6 @@ const caps = new MessageProcessor([catalog]).getRendererCapabilities({
   includeInlineCatalogs: true,
 });
 
-const out = new URL('../../Backend/fixtures/inline_caps.json', import.meta.url);
-mkdirSync(new URL('./', out), { recursive: true });
-writeFileSync(out, JSON.stringify(caps, null, 1));
-console.log(`wrote ${out.pathname} (${JSON.stringify(caps).length} chars), catalogs:`,
-  caps['v0.9'].supportedCatalogIds);
-
-// DESIGN B: the agent's own copy of the catalog, GENERATED from the same Zod source of truth.
-// The agent loads it with CatalogConfig.from_path(...) and the browser then sends only the id.
-// Never edit this file by hand; re-run `npm run export:caps` after changing a component.
 const catalogOut = new URL('../../Backend/fixtures/stats-v1.catalog.json', import.meta.url);
 writeFileSync(catalogOut, JSON.stringify(caps['v0.9'].inlineCatalogs[0], null, 1));
 console.log(`wrote ${catalogOut.pathname}`);

@@ -1,8 +1,8 @@
 # Milestone 4: Gemini decides the UI
 
-> The original observations below predate the ADK and AG-UI migrations. See
-> [Current layout](#current-layout-google-adk-simplified-for-learning) and
-> [the AG-UI migration record](./07-agui-migration.md) for the live implementation.
+> **Historical:** the observations and file layouts below (including "Current layout") predate the
+> backend simplification; `tests/manual/`, `runner.py`, `executor.py` and the Gemini/OpenAI configs are gone.
+> See [Backend/README.md](../Backend/README.md) for the live implementation.
 
 ## Run it
 ```

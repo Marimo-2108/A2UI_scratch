@@ -5,20 +5,21 @@ description = "AG-UI server that streams A2UI (agent-driven UI), built on Google
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "ag-ui-protocol>=1.0.0,<2.0.0",
     "a2ui-agent-sdk",
     "a2ui-core",
     "google-adk==2.9.2",
     "google-genai>=2.30.0",
     "litellm>=1.84,<=1.102.1",
     "pydantic-settings>=2",
-    "starlette>=1.3.1,<2",
     "truststore>=0.10.5",
     "uvicorn>=0.54.0",
+    "ag-ui-adk>=0.6.5",
+    "fastapi>=0.141.1",
+    "ag-ui-protocol>=1.0.0,<2.0.0",
 ]
 
 [project.scripts]
-a2ui-agent = "a2ui_agent_app.server:main"
+a2ui-agent = "a2ui_agent_app.main:main"
 
 [build-system]
 requires = ["uv_build>=0.11.14,<0.14.0"]

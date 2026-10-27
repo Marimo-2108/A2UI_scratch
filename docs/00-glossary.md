@@ -34,9 +34,8 @@ A2UI is the order slip format they pass back and forth.
 | **RUN_STARTED / RUN_FINISHED** | Events marking the beginning and successful end of a run. Finishing does not end the conversation. |
 | **RUN_ERROR** | Terminal failure event; the UI displays its message. No success event follows it. |
 | **TEXT_MESSAGE_START / CONTENT / END** | Events opening a text message, delivering its text delta, and closing it. |
-| **CUSTOM** | Application-defined event. We use `name: "a2ui"` and put one A2UI message in `value`. |
-| **forwardedProps** | AG-UI's application-specific input channel. We send `a2uiClientCapabilities` and optional `a2uiAction` here. |
-| **Capabilities / negotiation** | The client sends catalog IDs and inline schemas; the A2UI SDK selects and validates supported catalogs. No A2A extension header is involved. |
+| **TOOL_CALL_START / ARGS / END / RESULT** | Events for a tool the agent calls. Our agent calls `send_a2ui_json_to_client`; its RESULT carries the validated A2UI messages the browser renders. |
+| **Catalog (backend)** | The backend loads one fixed catalog file (`Backend/fixtures/stats-v1.catalog.json`), generated from the frontend catalog with `npm run export:caps`. |
 | **SSE (Server-Sent Events)** | A normal HTTP response that stays open so the server can push many events. Why the card appears step by step. |
 | **CORS / preflight** | Browser safety rule: a page may only call another address if that address allows it. The agent has to say yes. |
 | **Content type** | The response is `text/event-stream`. A2UI payloads no longer need a separate DataPart MIME marker. |
@@ -44,11 +43,11 @@ A2UI is the order slip format they pass back and forth.
 ## Added in Milestone 4 (the AI part)
 | Term | Plain meaning |
 |---|---|
-| **LLM** | The AI model (Gemini). It writes text; we make it write A2UI JSON. |
+| **LLM** | The AI model (an Azure deployment, called through LiteLLM). It writes text; we make it write A2UI JSON. |
 | **System prompt** | Standing instructions given to the model before the user's message. Ours = role + rules + the A2UI schema. |
 | **prompt_snippet** | The SDK's ready-made chunk of system prompt that teaches the model the A2UI format. |
 | **Validation** | Checking the model's JSON against the catalog schema before the user ever sees it. |
-| **Retry loop** | If validation fails, send the error back to the model and ask it to fix its answer. |
+| **Retry loop** | If validation fails, the tool returns the error to the model, which fixes its answer and calls the tool again. |
 | **Memory / history** | The earlier turns kept in ADK's in-memory session, keyed by `threadId`. The AG-UI client also maintains user/assistant message history. |
 | **Thinking level** | How long the model reasons before answering. Lower = faster. LOW is ~5-12s here, default ~43s, same result. |
 | **Token** | A chunk of text the model reads or writes (~4 characters). Cost and speed scale with tokens. |
@@ -62,7 +61,7 @@ A2UI is the order slip format they pass back and forth.
 | **Component API vs implementation** | API = the name and the allowed properties (a schema, just data). Implementation = how it looks (React code). Only the API is shared with the agent. |
 | **Zod** | A TypeScript library for describing the shape of data. We use it to describe StatCard's properties. |
 | **JSON Schema** | The language-neutral way to describe data shapes. The agent side reads this. Zod can be exported to it. |
-| **Inline catalog** | The client sends its whole catalog (as JSON Schema) inside its capabilities, so the agent learns custom components without keeping its own copy. |
+| **Inline catalog** | Earlier milestones: the client sent its whole catalog inside its capabilities. Now the backend uses a fixed exported catalog instead. |
 | **catalogId** | A name for a catalog. Both sides must agree on it exactly. Our custom one is `.../stats-v1.json`. |
 | **Enum** | A property that may only be one of a fixed list (trend: up, down, flat). Validation rejects anything else. |
 | **Lossy export** | Converting between schema formats can drop detail (very nested function calls become "anything"). |

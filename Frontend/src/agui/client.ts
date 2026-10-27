@@ -1,22 +1,15 @@
 import { HttpAgent, type AgentSubscriber } from '@ag-ui/client';
 import { EventType, type BaseEvent } from '@ag-ui/core';
-import { CustomEventSchema } from '@ag-ui/core/schemas';
-import type { ActionPayload } from '@a2ui/web_core/v0_9';
+import { ToolCallResultEventSchema } from '@ag-ui/core/schemas';
 import { z } from 'zod';
 
 export const AGENT_URL = import.meta.env.VITE_AGENT_URL ?? 'http://localhost:10010/';
-export const A2UI_EVENT_NAME = 'a2ui';
 export const PROTOCOL_VERSION = 'v0.9';
-
-export interface ActionEnvelope {
-  version: typeof PROTOCOL_VERSION;
-  action: ActionPayload;
-}
+/** The A2UI SDK tool the agent calls to send UI; its validated result carries the messages. */
+export const A2UI_TOOL_NAME = 'send_a2ui_json_to_client';
 
 export interface RunOptions {
   text: string;
-  capabilities: Record<string, unknown>;
-  action?: ActionEnvelope;
   onRequest?: (info: { url: string; headers: Record<string, string>; body: unknown }) => void;
   onEvent: (event: BaseEvent) => void;
 }
@@ -28,6 +21,7 @@ const a2uiMessage = z.object({
     .filter((key) => key in value).length === 1,
   'Expected exactly one A2UI message operation',
 );
+const a2uiToolResult = z.object({ validated_a2ui_json: z.array(a2uiMessage) });
 
 /** The SDK owns SSE decoding, event validation, and conversation message history. */
 export class UiAgentClient {
@@ -70,22 +64,22 @@ export class UiAgentClient {
         runError = new Error(event.message);
       },
     };
-    await this.agent.runAgent({
-      runId: crypto.randomUUID(),
-      forwardedProps: {
-        a2uiClientCapabilities: options.capabilities,
-        ...(options.action ? { a2uiAction: options.action } : {}),
-      },
-    }, subscriber);
+    await this.agent.runAgent({ runId: crypto.randomUUID() }, subscriber);
     if (callbackError) throw callbackError;
     if (runError) throw runError;
     if (!terminal) throw new Error('AG-UI stream ended before the run finished.');
   }
 }
 
+/**
+ * A2UI messages carried by a TOOL_CALL_RESULT of the A2UI tool. A result with `error` instead
+ * means the backend rejected the JSON and the model is retrying; nothing is rendered for it.
+ */
 export function a2uiMessagesOf(event: BaseEvent): Record<string, unknown>[] {
-  if (event.type !== EventType.CUSTOM) return [];
-  const custom = CustomEventSchema.parse(event);
-  if (custom.name !== A2UI_EVENT_NAME) return [];
-  return [a2uiMessage.parse(custom.value)];
+  if (event.type !== EventType.TOOL_CALL_RESULT) return [];
+  const { content } = ToolCallResultEventSchema.parse(event);
+  if (typeof content !== 'string') return [];
+  const parsed: unknown = JSON.parse(content);
+  if (!parsed || typeof parsed !== 'object' || !('validated_a2ui_json' in parsed)) return [];
+  return a2uiToolResult.parse(parsed).validated_a2ui_json;
 }

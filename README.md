@@ -5,35 +5,33 @@ A learning/prototyping project for [A2UI](https://a2ui.org) (agent-to-UI). An AI
 - [Backend/](./Backend/README.md) – Python AG-UI server. A Google ADK agent (Azure-hosted model via LiteLLM) decides the UI.
 - [Frontend/](./Frontend/README.md) – React + Vite client with a wire inspector and a custom catalog.
 - [docs/](./docs/) – Learning notes and historical experiments; start with the current workflow below.
-- [AG-UI migration](./docs/07-agui-migration.md) – Progress, wire contract, changes, removals and verification.
 
 ## Follow the workflow
 
 ```text
 React prompt
-  -> AG-UI RunAgentInput (including the client's component catalog in forwardedProps)
-  -> ADK agent + system prompt + catalog schema
-  -> model returns A2UI JSON
-  -> validate, retry if needed, repair surface messages
-  -> AG-UI SSE events (text + CUSTOM "a2ui" messages)
+  -> AG-UI RunAgentInput (POST /)
+  -> ag_ui_adk -> ADK agent + system prompt + catalog schema (fixed on the backend)
+  -> model calls send_a2ui_json_to_client with A2UI JSON
+  -> the A2UI SDK tool validates it (the model retries on error)
+  -> AG-UI SSE events (text + TOOL_CALL_RESULT carrying the validated A2UI messages)
   -> React MessageProcessor -> rendered UI
-  -> button action -> another request in the same conversation
+  -> button action -> "USER_ACTION {...}" message in the same conversation
 ```
 
 Read the files in this order:
 
 1. [Frontend/src/App.tsx](./Frontend/src/App.tsx): prompt, conversation and rendered surfaces.
-2. [Frontend/src/agui/client.ts](./Frontend/src/agui/client.ts): official AG-UI HTTP client, events and history.
-3. [Backend/server.py](./Backend/src/a2ui_agent_app/server.py): backend entry point and HTTP app.
-4. [Backend/executor.py](./Backend/src/a2ui_agent_app/executor.py): incoming run to outgoing AG-UI events.
-5. [Backend/runner.py](./Backend/src/a2ui_agent_app/runner.py): catalog negotiation, ADK sessions and validation/retry.
-6. [agents/agent.py](./Backend/src/a2ui_agent_app/agents/agent.py) and
-   [system-prompt.txt](./Backend/src/a2ui_agent_app/agents/system-prompt.txt): model selection and instructions.
-7. [Backend/a2ui.py](./Backend/src/a2ui_agent_app/a2ui.py): protocol helpers and surface repair.
+2. [Frontend/src/agui/client.ts](./Frontend/src/agui/client.ts): official AG-UI HTTP client; reads A2UI from tool results.
+3. [Backend/main.py](./Backend/src/a2ui_agent_app/main.py) and [Backend/_config.py](./Backend/src/a2ui_agent_app/_config.py): entry point and settings.
+4. [Backend/_app.py](./Backend/src/a2ui_agent_app/_app.py): the FastAPI app, model and agent setup.
+5. [agents/_ui_agent.py](./Backend/src/a2ui_agent_app/agents/_ui_agent.py) and
+   [system-prompt.txt](./Backend/src/a2ui_agent_app/agents/system-prompt.txt): the agent and its instructions.
+6. [api/_ui_agent.py](./Backend/src/a2ui_agent_app/api/_ui_agent.py): the AG-UI route.
 
 For a custom-component example, follow
 [myCatalog.ts](./Frontend/src/catalog/myCatalog.ts) to [StatCard.tsx](./Frontend/src/catalog/StatCard.tsx).
-The browser sends the catalog schema inline so the backend can generate and validate that component.
+The backend's catalog file is generated from it with `npm run export:caps`.
 
 ## Quick start (dev container, recommended)
 
@@ -68,14 +66,10 @@ uv run a2ui-agent         # listens on http://localhost:10010
 ```
 
 In `.env`, set `LLM` to a LiteLLM config for your Azure deployment, e.g.
-`LLM={"model_name": "azure/<deployment>", "provider_args": {"api_key": "...", "api_base": "https://<resource>.openai.azure.com/", "api_version": "2024-12-01-preview"}}`.
-Only Azure models (`azure/` or `azure_ai/`) are accepted and an API key is required. Never commit `.env`.
+`LLM={"model_name": "azure/<deployment>", "provider_args": {"api_key": "...", "api_base": "https://<resource>.openai.azure.com/", "api_version": "2025-04-01-preview"}}`.
+`api_key`, `api_base` and `api_version` are required. Never commit `.env`.
 
-Quick check without a browser:
-
-```
-uv run python tests/manual/try_agent.py "a small signup form"
-```
+Quick check without a browser: `curl http://localhost:10010/health`.
 
 ### 2. Web
 
@@ -87,7 +81,7 @@ npm run dev                # http://localhost:5173
 
 Open the app and start a new conversation.
 
-If you change the custom catalog, regenerate the capabilities fixture the agent uses with `npm run export:caps` (in `Frontend/`).
+If you change the custom catalog, regenerate the backend's catalog with `npm run export:caps` (in `Frontend/`, needs Node 22.6+), then restart the agent.
 
 ## Tests
 
@@ -104,5 +98,5 @@ npm run lint
 ```
 
 Tests use a fake LLM or mock HTTP streams; they do not need API keys.
-See [the glossary](./docs/00-glossary.md) and [the migration record](./docs/07-agui-migration.md)
-for the current protocol. Earlier milestone notes are historical where marked.
+See [the glossary](./docs/00-glossary.md) and [Backend/README.md](./Backend/README.md) for the current flow.
+Milestone notes in `docs/` are historical where marked.

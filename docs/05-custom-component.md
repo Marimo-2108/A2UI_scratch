@@ -1,5 +1,9 @@
 # Milestone 5: a custom component (StatCard) and our own catalog
 
+> **Historical:** Inline catalogs in client capabilities, `inline_caps.json`, `tests/manual/` and surface repair no longer exist. The backend has since been simplified to the
+> [adk-openui-example](https://github.com/ksachdeva/adk-openui-example) shape (`ag_ui_adk` + the A2UI SDK's
+> `send_a2ui_json_to_client` tool, fixed backend catalog). See [Backend/README.md](../Backend/README.md) for the live flow.
+
 ## The idea in one picture
 ```
  BROWSER (owns the component)                          AGENT (never sees React code)
