@@ -11,7 +11,7 @@
 
   "containerEnv": {
     // Bind to all interfaces so VS Code / Docker can forward the port to the host browser.
-    "AGENT_BIND_HOST": "0.0.0.0",
+    "AGENT_HOST": "0.0.0.0",
     // The browser (on the host) reaches the agent through the forwarded port.
     "VITE_AGENT_URL": "http://localhost:10010/",
     // The mounted workspace and uv cache can be on different filesystems.

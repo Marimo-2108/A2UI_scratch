@@ -1,5 +1,5 @@
 import { A2uiSurface } from '@a2ui/react/v0_9';
-import { AGENT_URL, PROTOCOL_VERSION } from './agui/client';
+import { PROTOCOL_VERSION } from './agui/client';
 import { PromptComposer } from './components/PromptComposer';
 import { WireInspector } from './components/WireInspector';
 import { useUiAgent } from './hooks/useUiAgent';
@@ -102,11 +102,6 @@ export default function App() {
           </section>
         </div>
       </main>
-
-      <footer className="app-footer">
-        {/* <span>Browser <span aria-hidden="true">→</span> AG-UI stream <span aria-hidden="true">→</span> Python agent</span>
-        <span className="endpoint">Endpoint <code>{AGENT_URL}</code></span> */}
-      </footer>
     </div>
   );
 }

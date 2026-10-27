@@ -162,8 +162,9 @@ uvicorn.run(app, host=..., port=...)
 
 Uvicorn is the HTTP server process, comparable to Node's `http.createServer(...).listen(...)`.
 FastAPI defines how requests are handled; Uvicorn opens the socket, accepts HTTP traffic and calls
-the ASGI application. `agent_bind_host` can override `agent_host` (for example, binding to
-`0.0.0.0` inside a dev container); `agent_port` defaults to `10010`.
+the ASGI application. `agent_host` controls where Uvicorn listens. It defaults to `localhost`;
+the dev container sets it to `0.0.0.0` so forwarded connections can reach the backend.
+`agent_port` defaults to `10010`.
 
 The `if __name__ == "__main__":` block is similar to checking `require.main === module` in
 CommonJS: it calls `main()` only when this file itself is executed as a script.
@@ -175,14 +176,14 @@ validation, similar to loading dotenv values and parsing them with a Zod schema.
 
 ```python
 model_config = SettingsConfigDict(
-    env_file=os.getenv("AGENT_ENV_FILE", ".env"),
+    env_file=".env",
     env_ignore_empty=True,
     extra="ignore",
 )
 ```
 
-- The default `.env` path is relative to the process's current working directory. Running from
-  `Backend/` makes that `Backend/.env`. `AGENT_ENV_FILE` can select another file.
+- The `.env` path is relative to the process's current working directory. Running from
+  `Backend/` makes that `Backend/.env`.
 - Empty environment values are treated as unset.
 - Unknown environment variables are ignored. This allows unrelated or older keys to exist
   without making startup fail; it also means a misspelled setting may be silently ignored.
@@ -194,8 +195,7 @@ Important fields:
 | `llm: LiteLlmConfig` | Required `LLM` JSON variable | Model identifier and provider arguments. |
 | `generate_content` | Optional `GENERATE_CONTENT` JSON variable | ADK generation settings, such as temperature. |
 | `a2ui_catalog_path` | `fixtures/stats-v1.catalog.json` | Components and schema allowed for generated UI. |
-| `agent_host` | `AGENT_HOST`, default `localhost` | Default server bind host. |
-| `agent_bind_host` | `AGENT_BIND_HOST`, default empty | Optional override of `agent_host`. |
+| `agent_host` | `AGENT_HOST`, default `localhost` | Server bind host. |
 | `agent_port` | `AGENT_PORT`, default `10010` | TCP port for uvicorn. |
 | `web_origin_regex` | Default `http://localhost:\d+` | Browser origins allowed by CORS middleware. |
 | `use_system_truststore` | `USE_SYSTEM_TRUSTSTORE`, default `True` | Whether to use the OS certificate store. |

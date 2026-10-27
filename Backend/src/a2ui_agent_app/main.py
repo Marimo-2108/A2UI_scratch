@@ -21,7 +21,7 @@ def main() -> None:
         app = App(config)
     except (ValidationError, RuntimeError) as e:
         sys.exit(f"Backend config error (check Backend/.env, see .env.example):\n{e}")
-    uvicorn.run(app, host=config.agent_bind_host or config.agent_host, port=config.agent_port)
+    uvicorn.run(app, host=config.agent_host, port=config.agent_port)
 
 
 if __name__ == "__main__":
