@@ -1,12 +1,11 @@
 import { HttpAgent, type AgentSubscriber } from '@ag-ui/client';
 import { EventType, type BaseEvent } from '@ag-ui/core';
 import { ToolCallResultEventSchema } from '@ag-ui/core/schemas';
+import { A2uiMessageSchema, type A2uiMessage } from '@a2ui/web_core/v0_9';
 import { z } from 'zod';
 
 export const AGENT_URL = import.meta.env.VITE_AGENT_URL ?? 'http://localhost:10010/';
 export const PROTOCOL_VERSION = 'v0.9';
-/** The A2UI SDK tool the agent calls to send UI; its validated result carries the messages. */
-export const A2UI_TOOL_NAME = 'send_a2ui_json_to_client';
 
 export interface RunOptions {
   text: string;
@@ -14,12 +13,9 @@ export interface RunOptions {
   onEvent: (event: BaseEvent) => void;
 }
 
-const a2uiMessage = z.object({
-  version: z.literal(PROTOCOL_VERSION),
-}).passthrough().refine(
-  (value) => ['createSurface', 'updateComponents', 'updateDataModel', 'deleteSurface']
-    .filter((key) => key in value).length === 1,
-  'Expected exactly one A2UI message operation',
+const a2uiMessage = A2uiMessageSchema.refine(
+  (message) => message.version === PROTOCOL_VERSION,
+  `Expected A2UI ${PROTOCOL_VERSION}`,
 );
 const a2uiToolResult = z.object({ validated_a2ui_json: z.array(a2uiMessage) });
 
@@ -75,7 +71,7 @@ export class UiAgentClient {
  * A2UI messages carried by a TOOL_CALL_RESULT of the A2UI tool. A result with `error` instead
  * means the backend rejected the JSON and the model is retrying; nothing is rendered for it.
  */
-export function a2uiMessagesOf(event: BaseEvent): Record<string, unknown>[] {
+export function a2uiMessagesOf(event: BaseEvent): A2uiMessage[] {
   if (event.type !== EventType.TOOL_CALL_RESULT) return [];
   const { content } = ToolCallResultEventSchema.parse(event);
   if (typeof content !== 'string') return [];

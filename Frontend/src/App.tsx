@@ -1,186 +1,112 @@
-import { useRef, useState } from 'react';
-import { MessageProcessor } from '@a2ui/web_core/v0_9';
-import { myCatalog } from './catalog/myCatalog';
-import { A2uiSurface, type ReactCatalogComponent } from '@a2ui/react/v0_9';
-import { EventType, type BaseEvent } from '@ag-ui/core';
-import { TextMessageContentEventSchema } from '@ag-ui/core/schemas';
-import {
-  AGENT_URL,
-  PROTOCOL_VERSION,
-  UiAgentClient,
-  a2uiMessagesOf,
-} from './agui/client';
+import { A2uiSurface } from '@a2ui/react/v0_9';
+import { AGENT_URL, PROTOCOL_VERSION } from './agui/client';
+import { PromptComposer } from './components/PromptComposer';
+import { WireInspector } from './components/WireInspector';
+import { useUiAgent } from './hooks/useUiAgent';
 import './App.css';
 
-interface TraceRow {
-  n: number;
-  at: string;
-  dir: 'out' | 'in';
-  label: string;
-  raw: unknown;
-}
-
-function describe(ev: BaseEvent): string {
-  const messages = a2uiMessagesOf(ev);
-  return messages.length
-    ? `${ev.type} · A2UI ${messages.map((m) => Object.keys(m).find((k) => k !== 'version')).join(',')}`
-    : ev.type;
-}
-
 export default function App() {
-  const [prompt, setPrompt] = useState('a small signup form');
-  const [busy, setBusy] = useState(false);
-  const [trace, setTrace] = useState<TraceRow[]>([]);
-  const [selected, setSelected] = useState<number | null>(null);
-  const [errors, setErrors] = useState<string[]>([]);
-  const [chat, setChat] = useState<string[]>([]);
-  const [, refreshSurfaces] = useState(0);
-  const [hasConversation, setHasConversation] = useState(false);
-  const client = useRef<UiAgentClient | null>(null);
-  const running = useRef(false);
-  const seq = useRef(0);
-
-  // The MessageProcessor owns surface state. Its 2nd argument is the ACTION HANDLER: the library
-  // calls it when the user clicks a Button whose component has an `action.event`; we send the
-  // action to the agent.
-  function makeProcessor() {
-    const p: MessageProcessor<ReactCatalogComponent> = new MessageProcessor<ReactCatalogComponent>(
-      [myCatalog], // basic components + our StatCard
-      (action) => {
-        push('out', 'action ' + action.name + ' (clicked in UI)', action);
-        void run(p, `USER_ACTION ${JSON.stringify(action)}`);
-      },
-    );
-    return p;
-  }
-  const [processor, setProcessor] = useState(makeProcessor);
-  function push(dir: TraceRow['dir'], label: string, raw: unknown) {
-    setTrace((t) => [...t, { n: ++seq.current, at: new Date().toLocaleTimeString(), dir, label, raw }]);
-  }
-
-  async function run(
-    p: MessageProcessor<ReactCatalogComponent>, text: string,
-  ) {
-    if (running.current) {
-      setErrors((x) => [...x, 'An agent run is already active. Wait before sending another action.']);
-      return;
-    }
-    running.current = true;
-    setBusy(true);
-    try {
-      client.current ??= new UiAgentClient();
-      await client.current.run({
-        text,
-        onRequest: (r) => push('out', 'POST AG-UI run', r),
-        onEvent: (ev) => {
-          if (ev.type === EventType.RUN_STARTED) setHasConversation(true);
-          push('in', describe(ev), ev);
-          if (ev.type === EventType.TEXT_MESSAGE_CONTENT) {
-            const { delta } = TextMessageContentEventSchema.parse(ev);
-            setChat((c) => [...c, delta]);
-          }
-          for (const msg of a2uiMessagesOf(ev)) {
-            // Keep the existing surface if a restarted agent sends a duplicate create.
-            const dup = (msg as { createSurface?: { surfaceId: string } }).createSurface;
-            if (dup && p.getSurface(dup.surfaceId)) {
-              push('in', `ignored duplicate createSurface "${dup.surfaceId}" (already on screen)`, msg);
-              continue;
-            }
-            try {
-              p.processMessages(msg as never);
-            } catch (e) {
-              setErrors((x) => [...x, e instanceof Error ? e.message : String(e)]);
-            }
-          }
-          refreshSurfaces((t) => t + 1);
-        },
-      });
-    } catch (e) {
-      setErrors((x) => [...x, e instanceof Error ? e.message : String(e)]);
-    } finally {
-      running.current = false;
-      setBusy(false);
-    }
-  }
-
-  /** A new processor clears the screen; a new AG-UI client creates a new thread. */
-  const send = () => {
-    if (running.current) return;
-    setErrors([]);
-    setChat([]);
-    client.current = new UiAgentClient();
-    setHasConversation(false);
-    const p = makeProcessor();
-    setProcessor(p);
-    void run(p, prompt);
-  };
-  /** "Follow-up": same conversation and same screen; the agent must update what is already there. */
-  const followUp = () => {
-    setErrors([]);
-    void run(processor, prompt);
-  };
-
-  const surfaces = Array.from(processor.model.surfacesMap.values());
-  const sel = trace.find((r) => r.n === selected);
+  const { busy, trace, errors, chat, surfaces, hasConversation, send, followUp, clearTrace } = useUiAgent();
 
   return (
     <div className="layout">
-      <header>
-        <h1>A2UI learning app</h1>
-        <p>
-          Browser → AG-UI (HTTP + SSE) → Python agent at <code>{AGENT_URL}</code>.
-          UI format: A2UI <code>{PROTOCOL_VERSION}</code>
-        </p>
+      <header className="app-header">
+        <div className="brand">
+          <span className="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="m12 3 9 5-9 5-9-5 9-5Z" fill="currentColor" />
+              <path d="m3 12 9 5 9-5M3 16l9 5 9-5" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+            </svg>
+          </span>
+          <span>A2UI <strong>Studio</strong></span>
+          <span className="header-divider" aria-hidden="true" />
+          <span className="workspace-label">Playground</span>
+        </div>
+        <div className={`status-badge${busy ? ' is-busy' : ''}`} role="status">
+          <span className="status-dot" aria-hidden="true" />
+          {busy ? 'Generating interface' : hasConversation ? 'Conversation active' : 'Ready to create'}
+        </div>
       </header>
 
-      <section className="panel">
-        <div className="toolbar">
-          <input
-            aria-label="Message to the agent"
-            style={{ flex: 1, padding: 6 }}
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && !busy && send()}
-          />
-          <button onClick={send} disabled={busy}>
-            {busy ? 'Working…' : 'New conversation ▶'}
-          </button>
-          <button onClick={followUp} disabled={busy || !hasConversation}>
-            Follow-up
-          </button>
-          <button onClick={() => { setTrace([]); setSelected(null); }}>Clear trace</button>
+      <section className="intro" aria-labelledby="page-title">
+        <div>
+          <p className="eyebrow">YOUR AGENT. YOUR INTERFACE.</p>
+          <h1 id="page-title">Turn an idea into an interface.</h1>
+          <p className="intro-copy">Describe it, watch it take shape, and explore every message along the way.</p>
         </div>
-
-        <h2>Wire inspector</h2>
-        <ol className="steps">
-          {trace.length === 0 && <li className="muted">Nothing yet. Send a message.</li>}
-          {trace.map((r) => (
-            <li
-              key={r.n}
-              className={['sent', r.n === selected ? 'sel' : ''].join(' ')}
-              onClick={() => setSelected(r.n)}
-            >
-              <span className="muted">{r.at}</span> {r.dir === 'out' ? '⬆' : '⬇'} {r.label}
-            </li>
-          ))}
-        </ol>
-        <pre>{sel ? JSON.stringify(sel.raw, null, 2) : '(click a row to see the raw JSON)'}</pre>
-        {errors.map((e, i) => (
-          <pre key={i} className="error">{e}</pre>
-        ))}
+        <div className="protocol-badge">AG-UI <span aria-hidden="true">/</span> A2UI {PROTOCOL_VERSION}</div>
       </section>
 
-      <section className="panel">
-        <h2>Agent text</h2>
-        <pre>{chat.length ? chat.join('\n') : '(none)'}</pre>
-        <h2>Rendered UI</h2>
-        <div className="rendered">
-          {surfaces.length === 0 && <div className="muted">No surfaces.</div>}
-          {surfaces.map((s) => (
-            <A2uiSurface key={s.id} surface={s} />
-          ))}
+      <PromptComposer busy={busy} hasConversation={hasConversation} onSend={send} onFollowUp={followUp} />
+
+      {errors.length > 0 && (
+        <section className="error-panel" role="alert" aria-label="Agent errors">
+          <h2>Something needs your attention</h2>
+          {errors.map((error, index) => <pre key={index} className="error">{error}</pre>)}
+        </section>
+      )}
+
+      <main className="workspace">
+        <section className="panel inspector-panel" aria-label="Wire inspector">
+          <WireInspector trace={trace} onClear={clearTrace} />
+        </section>
+
+        <div className="preview-column">
+          <section className="panel preview-panel" aria-labelledby="preview-title">
+            <div className="panel-heading">
+              <div>
+                <p className="eyebrow">THE RESULT</p>
+                <h2 id="preview-title">Live preview</h2>
+              </div>
+              <span className="count-badge">{surfaces.length} {surfaces.length === 1 ? 'surface' : 'surfaces'}</span>
+            </div>
+            <div className="rendered" aria-busy={busy}>
+              {surfaces.length === 0 && (
+                <div className="preview-empty">
+                  <div className="preview-illustration" aria-hidden="true">
+                    <svg viewBox="0 0 160 112" fill="none">
+                      <rect x="22" y="12" width="116" height="88" rx="10" fill="var(--panel)" stroke="var(--border)" />
+                      <path d="M22 34h116" stroke="var(--border)" />
+                      <circle cx="34" cy="24" r="3" fill="var(--accent)" />
+                      <circle cx="44" cy="24" r="3" fill="var(--border)" />
+                      <circle cx="54" cy="24" r="3" fill="var(--border)" />
+                      <rect x="34" y="46" width="38" height="42" rx="5" fill="var(--accent-soft)" />
+                      <rect x="82" y="48" width="42" height="5" rx="2.5" fill="var(--border)" />
+                      <rect x="82" y="60" width="32" height="5" rx="2.5" fill="var(--border)" />
+                      <rect x="82" y="76" width="26" height="12" rx="4" fill="var(--accent)" />
+                    </svg>
+                  </div>
+                  <h3>{busy ? 'Bringing your idea to life' : 'Your next interface starts here'}</h3>
+                  <p>{busy ? 'The agent is working. Incoming UI will appear here.' : 'Send a prompt above. Your agent-generated UI will appear in this space, ready to interact with.'}</p>
+                  <span className="preview-empty-caption">PROMPT → GENERATE → INTERACT</span>
+                </div>
+              )}
+              {surfaces.map((surface) => (
+                <div className="surface-frame" key={surface.id}>
+                  <div className="surface-label"><span className="status-dot" aria-hidden="true" />{surface.id}</div>
+                  <A2uiSurface surface={surface} />
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="panel agent-panel" aria-labelledby="agent-title">
+            <div className="agent-heading">
+              <span className="agent-avatar" aria-hidden="true">✦</span>
+              <h2 id="agent-title">Agent notes</h2>
+              <span className="muted">{busy ? 'Responding...' : 'Assistant'}</span>
+            </div>
+            {chat.length
+              ? <pre className="agent-text">{chat.join('\n')}</pre>
+              : <p className="agent-placeholder">A little context from your agent will show up here.</p>}
+          </section>
         </div>
-      </section>
+      </main>
+
+      <footer className="app-footer">
+        {/* <span>Browser <span aria-hidden="true">→</span> AG-UI stream <span aria-hidden="true">→</span> Python agent</span>
+        <span className="endpoint">Endpoint <code>{AGENT_URL}</code></span> */}
+      </footer>
     </div>
   );
 }

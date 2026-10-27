@@ -3,11 +3,13 @@ import { after, test } from 'node:test';
 import { createServer } from 'vite';
 
 const vite = await createServer({
-  server: { middlewareMode: true },
+  server: { middlewareMode: true, hmr: false },
   appType: 'custom',
 });
 after(() => vite.close());
 const { UiAgentClient, a2uiMessagesOf } = await vite.ssrLoadModule('/src/agui/client.ts');
+const { MessageProcessor } = await import('@a2ui/web_core/v0_9');
+const { basicCatalog } = await import('@a2ui/web_core/v0_9/basic_catalog');
 
 const uiMessage = {
   version: 'v0.9',
@@ -119,8 +121,45 @@ test('A2UI tool results: malformed validated payloads throw; errors and other ev
   assert.deepEqual(a2uiMessagesOf(toolResult('x', { weather: 'sunny' })), []);
   assert.deepEqual(a2uiMessagesOf({ type: 'CUSTOM', name: 'a2ui', value: uiMessage }), []);
   assert.deepEqual(a2uiMessagesOf({ type: 'RUN_STARTED', threadId: 't', runId: 'r' }), []);
-  for (const value of [null, [], {}, { version: 'v0.9' }, { ...uiMessage, version: 'v9' }]) {
+  for (const value of [
+    null, [], {}, { version: 'v0.9' }, { ...uiMessage, version: 'v9' },
+    { ...uiMessage, version: 'v0.9.1' },
+    { version: 'v0.9', createSurface: {} },
+    { ...uiMessage, deleteSurface: { surfaceId: 'form' } },
+    { version: 'v0.9', updateComponents: { surfaceId: 'form', components: 'invalid' } },
+    { version: 'v0.9', updateDataModel: { surfaceId: 123, value: {} } },
+    { version: 'v0.9', deleteSurface: {} },
+  ]) {
     assert.throws(() => a2uiMessagesOf(toolResult('x', { validated_a2ui_json: [value] })));
+  }
+});
+
+test('all supported A2UI operations pass through to the real message processor', () => {
+  const processor = new MessageProcessor([basicCatalog]);
+  const messages = [
+    { ...uiMessage, createSurface: { surfaceId: 'form', catalogId: basicCatalog.id } },
+    {
+      version: 'v0.9',
+      updateComponents: {
+        surfaceId: 'form',
+        components: [{ id: 'root', component: 'Text', text: 'Hello' }],
+      },
+    },
+    { version: 'v0.9', updateDataModel: { surfaceId: 'form', path: '/', value: { count: 1 } } },
+  ];
+  try {
+    const parsed = a2uiMessagesOf(toolResult('x', { validated_a2ui_json: messages }));
+    assert.deepEqual(parsed, messages);
+    for (const message of parsed) processor.processMessages(message);
+    assert.ok(processor.getSurface('form'));
+
+    const deletion = { version: 'v0.9', deleteSurface: { surfaceId: 'form' } };
+    const [message] = a2uiMessagesOf(toolResult('delete', { validated_a2ui_json: [deletion] }));
+    assert.deepEqual(message, deletion);
+    processor.processMessages(message);
+    assert.equal(processor.getSurface('form'), undefined);
+  } finally {
+    processor.dispose();
   }
 });
 
