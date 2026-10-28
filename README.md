@@ -37,16 +37,13 @@ The backend's catalog file is generated from it with `npm run export:caps`.
 
 Only [Docker](https://www.docker.com/) and VS Code/Cursor with the Dev Containers extension are needed. No local Python, uv or Node.
 
-The [Dockerfile](.devcontainer/Dockerfile) installs the organization's Cloudflare Gateway CA into the system trust store during the image build, before editor extensions or dependency installation run. Before the first build, place your IT-approved PEM-encoded CA certificate at `.devcontainer/cloudflare-root.crt`. This local file is Git-ignored and required by the build; use your organization's certificate, not one copied from another repository. Node uses the additional CA, and `UV_SYSTEM_CERTS=true` enables system certificate trust for uv. There is no `SSL_CERT_FILE` override; Python libraries that use their own CA bundles may need library-specific configuration.
+1. Get the Cloudflare root certificate from your IT team and save it as `.devcontainer/cloudflare-root.crt` (Git-ignored, required by the build).
+2. Open this folder and run **Dev Containers: Reopen in Container**. First build installs everything (`.devcontainer/post-create.sh`) and creates `Backend/.env` from the example.
+3. Edit `Backend/.env` and fill in `LLM` (Azure deployment as `azure/<deployment>`, plus `api_key`, `api_base`, `api_version` in `provider_args`).
+4. In two terminals: `cd Backend && uv run a2ui-agent` and `cd Frontend && npm run dev`.
+5. Open http://localhost:5173. If ports are forwarded differently (check the Ports panel), set `VITE_AGENT_URL` to the backend address and restart Vite.
 
-1. Open this folder and run **Dev Containers: Reopen in Container**. First build installs everything (`.devcontainer/post-create.sh`) and creates `Backend/.env` from the example.
-2. Edit `Backend/.env` and fill in `LLM` (Azure deployment as `azure/<deployment>`, plus `api_key`, `api_base`, `api_version` in `provider_args`).
-3. In two terminals: `cd Backend && uv run a2ui-agent` and `cd Frontend && npm run dev`.
-4. Open http://localhost:5173. VS Code detects listening server processes and forwards their ports automatically; check the Ports panel for the actual local addresses if a port is already occupied. Set `VITE_AGENT_URL` to the backend's forwarded address if it is not localhost:10010, then restart Vite.
-
-VS Code mounts the project folder automatically; no explicit dependency mounts are needed. Dependencies are installed into `Backend/.venv` and `Frontend/node_modules` in that folder. Avoid sharing these directories with a Windows install. After switching from the old named volumes, the post-create script installs dependencies in the workspace; the old Docker volumes are no longer used and are not deleted automatically. Ports use VS Code's default labels and browser-opening behavior.
-
-After changing the certificate or dev container configuration, run **Dev Containers: Rebuild and Reopen in Container** (or **Rebuild Container** if already attached). Reopening a terminal alone does not rebuild the image or restart all extension processes with the new certificate settings. The post-create script installs application dependencies; it no longer modifies certificate trust.
+After changing the certificate or dev container configuration, run **Dev Containers: Rebuild Container**.
 
 ## Prerequisites (manual setup, without the dev container)
 
