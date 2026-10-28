@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useState } from 'react';
 import type { TraceRow } from '../hooks/useUiAgent';
+import { Button } from './Button';
+import { PanelHeading } from './PanelHeading';
 
 interface WireInspectorProps {
   trace: TraceRow[];
@@ -28,19 +30,15 @@ function kindOf(row: TraceRow): EventKind {
 export function WireInspector({ trace, onClear }: WireInspectorProps) {
   const [selected, setSelected] = useState<TraceRow | null>(null);
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle');
-  const raw = useMemo(
-    () => selected ? JSON.stringify(selected.raw, null, 2) : '// Select an event above to inspect its payload.',
-    [selected],
-  );
+  const raw = selected ? JSON.stringify(selected.raw, null, 2) : '// Select an event above to inspect its payload.';
 
-  useEffect(() => {
-    if (copyState === 'idle') return;
-    const timer = setTimeout(() => setCopyState('idle'), 1600);
-    return () => clearTimeout(timer);
-  }, [copyState]);
+  function select(row: TraceRow | null) {
+    setSelected(row);
+    setCopyState('idle');
+  }
 
   function clear() {
-    setSelected(null);
+    select(null);
     onClear();
   }
 
@@ -55,13 +53,12 @@ export function WireInspector({ trace, onClear }: WireInspectorProps) {
 
   return (
     <>
-      <div className="panel-heading">
-        <div>
-          <p className="eyebrow">BEHIND THE SCENES</p>
-          <h2>Wire inspector <span className="count-badge">{trace.length}</span></h2>
-        </div>
-        <button className="studio-button text-button" onClick={clear} disabled={!trace.length}>Clear trace</button>
-      </div>
+      <PanelHeading
+        eyebrow="BEHIND THE SCENES"
+        title={<>Wire inspector <span className="count-badge">{trace.length}</span></>}
+      >
+        <Button variant="text" onClick={clear} disabled={!trace.length}>Clear trace</Button>
+      </PanelHeading>
       <div className="trace-content">
         {trace.length === 0 ? (
           <div className="trace-empty">
@@ -80,7 +77,7 @@ export function WireInspector({ trace, onClear }: WireInspectorProps) {
                     className={`trace-row kind-${kind}${row.n === selected?.n ? ' sel' : ''}`}
                     aria-pressed={row.n === selected?.n}
                     title={row.label}
-                    onClick={() => setSelected(row)}
+                    onClick={() => select(row)}
                   >
                     <span className={`trace-direction ${row.dir === 'out' ? 'outbound' : 'inbound'}`} aria-label={row.dir === 'out' ? 'Outgoing' : 'Incoming'}>
                       {row.dir === 'out' ? '↑' : '↓'}

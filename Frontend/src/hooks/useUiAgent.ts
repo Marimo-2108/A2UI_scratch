@@ -16,26 +16,34 @@ export interface TraceRow {
 
 type UiProcessor = MessageProcessor<ReactCatalogComponent>;
 
-function describe(event: BaseEvent, messages: A2uiMessage[]): string {
-  return messages.length
-    ? `${event.type} · A2UI ${messages.map((m) => Object.keys(m).find((k) => k !== 'version')).join(',')}`
-    : event.type;
+interface AgentMessage {
+  id: string;
+  text: string;
+}
+
+function describeEvent(event: BaseEvent, messages: A2uiMessage[]): string {
+  if (messages.length === 0) return event.type;
+
+  const operations = messages.map((message) =>
+    Object.keys(message).find((key) => key !== 'version'),
+  );
+  return `${event.type} · A2UI ${operations.join(',')}`;
 }
 
 export function useUiAgent() {
   const [busy, setBusy] = useState(false);
   const [trace, setTrace] = useState<TraceRow[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
-  const [chat, setChat] = useState<{ id: string; text: string }[]>([]);
+  const [chat, setChat] = useState<AgentMessage[]>([]);
   const [surfaces, setSurfaces] = useState<SurfaceModel<ReactCatalogComponent>[]>([]);
   const [hasConversation, setHasConversation] = useState(false);
   const client = useRef<UiAgentClient | null>(null);
   const processor = useRef<UiProcessor | null>(null);
   const running = useRef(false);
-  const seq = useRef(0);
+  const traceId = useRef(0);
 
-  function push(dir: TraceRow['dir'], label: string, raw: unknown) {
-    const row = { n: ++seq.current, at: new Date().toLocaleTimeString(), dir, label, raw };
+  function addTrace(dir: TraceRow['dir'], label: string, raw: unknown) {
+    const row = { n: ++traceId.current, at: new Date().toLocaleTimeString(), dir, label, raw };
     setTrace((rows) => [...rows, row]);
   }
 
@@ -43,18 +51,49 @@ export function useUiAgent() {
     setErrors((previous) => [...previous, error instanceof Error ? error.message : String(error)]);
   }
 
-  function makeProcessor(): UiProcessor {
-    const next: UiProcessor = new MessageProcessor<ReactCatalogComponent>(
-      [myCatalog],
-      (action) => {
-        push('out', 'action ' + action.name + ' (clicked in UI)', action);
-        void run(next, `USER_ACTION ${JSON.stringify(action)}`);
-      },
-    );
-    return next;
+  function appendText(messageId: string, delta: string) {
+    setChat((messages) => {
+      const lastMessage = messages.at(-1);
+      if (lastMessage?.id !== messageId) {
+        return [...messages, { id: messageId, text: delta }];
+      }
+
+      const updatedMessage = { id: messageId, text: lastMessage.text + delta };
+      return [...messages.slice(0, -1), updatedMessage];
+    });
   }
 
-  async function run(current: UiProcessor, text: string) {
+  function processUiMessages(uiProcessor: UiProcessor, messages: A2uiMessage[]) {
+    for (const message of messages) {
+      // Follow-ups may recreate a surface that is already on screen.
+      if ('createSurface' in message && uiProcessor.getSurface(message.createSurface.surfaceId)) {
+        addTrace('in', `ignored duplicate createSurface "${message.createSurface.surfaceId}" (already on screen)`, message);
+        continue;
+      }
+      uiProcessor.processMessages(message);
+    }
+    setSurfaces(Array.from(uiProcessor.getSurfaces().values()));
+  }
+
+  function handleEvent(uiProcessor: UiProcessor, event: BaseEvent) {
+    const messages = a2uiMessagesOf(event);
+    addTrace('in', describeEvent(event, messages), event);
+
+    switch (event.type) {
+      case EventType.RUN_STARTED:
+        setHasConversation(true);
+        break;
+      case EventType.TEXT_MESSAGE_CONTENT: {
+        const { messageId, delta } = TextMessageContentEventSchema.parse(event);
+        appendText(messageId, delta);
+        break;
+      }
+    }
+
+    if (messages.length > 0) processUiMessages(uiProcessor, messages);
+  }
+
+  async function run(uiProcessor: UiProcessor, text: string) {
     if (running.current) {
       reportError('An agent run is already active. Wait before sending another action.');
       return;
@@ -65,34 +104,8 @@ export function useUiAgent() {
       client.current ??= new UiAgentClient();
       await client.current.run({
         text,
-        onRequest: (request) => push('out', 'POST AG-UI run', request),
-        onEvent: (event) => {
-          if (event.type === EventType.RUN_STARTED) setHasConversation(true);
-          const messages = a2uiMessagesOf(event);
-          push('in', describe(event, messages), event);
-          if (event.type === EventType.TEXT_MESSAGE_CONTENT) {
-            const { messageId, delta } = TextMessageContentEventSchema.parse(event);
-            setChat((messages) => {
-              const last = messages.at(-1);
-              return last?.id === messageId
-                ? [...messages.slice(0, -1), { id: messageId, text: last.text + delta }]
-                : [...messages, { id: messageId, text: delta }];
-            });
-          }
-          for (const message of messages) {
-            // A restarted agent may try to recreate a surface that is already on screen.
-            if ('createSurface' in message && current.getSurface(message.createSurface.surfaceId)) {
-              push('in', `ignored duplicate createSurface "${message.createSurface.surfaceId}" (already on screen)`, message);
-              continue;
-            }
-            try {
-              current.processMessages(message);
-            } catch (error) {
-              reportError(error);
-            }
-          }
-          if (messages.length) setSurfaces(Array.from(current.getSurfaces().values()));
-        },
+        onRequest: (request) => addTrace('out', 'POST AG-UI run', request),
+        onEvent: (event) => handleEvent(uiProcessor, event),
       });
     } catch (error) {
       reportError(error);
@@ -108,10 +121,16 @@ export function useUiAgent() {
     setChat([]);
     client.current = new UiAgentClient();
     setHasConversation(false);
-    const next = makeProcessor();
-    processor.current = next;
+    const uiProcessor: UiProcessor = new MessageProcessor<ReactCatalogComponent>(
+      [myCatalog],
+      (action) => {
+        addTrace('out', `action ${action.name} (clicked in UI)`, action);
+        void run(uiProcessor, `USER_ACTION ${JSON.stringify(action)}`);
+      },
+    );
+    processor.current = uiProcessor;
     setSurfaces([]);
-    void run(next, text);
+    void run(uiProcessor, text);
   }
 
   function followUp(text: string) {

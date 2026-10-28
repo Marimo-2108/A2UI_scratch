@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Button } from './Button';
 
 interface PromptComposerProps {
   busy: boolean;
@@ -37,19 +38,17 @@ export function PromptComposer({ busy, hasConversation, onSend, onFollowUp }: Pr
             value={prompt}
             onChange={(event) => setPrompt(event.target.value)}
           />
-          <button className="studio-button primary-button" type="submit" disabled={!canSend}>
+          <Button variant="primary" type="submit" disabled={!canSend}>
             {busy ? <span className="spinner" aria-hidden="true" /> : <span aria-hidden="true">＋</span>}
             {busy ? 'Generating...' : 'New conversation'}
-          </button>
-          <button
-            className="studio-button secondary-button"
-            type="button"
+          </Button>
+          <Button
             onClick={() => onFollowUp(prompt)}
             disabled={!canSend || !hasConversation}
             title={hasConversation ? 'Continue with the current interface and history' : 'Start a conversation first'}
           >
             Follow-up <span aria-hidden="true">↗</span>
-          </button>
+          </Button>
         </div>
         <div className="composer-footer">
           <div className="prompt-examples" aria-label="Example prompts">

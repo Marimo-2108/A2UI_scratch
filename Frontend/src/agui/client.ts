@@ -28,7 +28,6 @@ export class UiAgentClient {
   }
 
   async run(options: RunOptions): Promise<void> {
-    if (this.agent.isRunning) throw new Error('A run is already active for this conversation.');
     this.agent.messages.push({ id: crypto.randomUUID(), role: 'user', content: options.text });
     let terminal = false;
     let runError: Error | undefined;
