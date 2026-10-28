@@ -2,6 +2,7 @@
 
 import json
 from collections.abc import AsyncGenerator
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -116,6 +117,20 @@ def test_invalid_ui_is_returned_to_model_and_fixed(model: FakeLlm, config: Backe
     assert len(model._requests) == 2
 
 
+def test_static_instruction_reaches_model(
+    model: FakeLlm, config: BackendConfig, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+):
+    prompt = "Generate a UI for a caf\u00e9.\n"
+    (tmp_path / "system-prompt.txt").write_text(prompt, encoding="utf-8")
+    monkeypatch.setattr("a2ui_agent_app.agents._ui_agent.__file__", str(tmp_path / "_ui_agent.py"))
+    model._outputs = [ui_call()]
+
+    events = run(TestClient(App(config)), [user("a form")])
+
+    assert events[-1]["type"] == "RUN_FINISHED"
+    assert prompt in str(model._requests[0].config.system_instruction)
+
+
 def test_follow_up_keeps_conversation(model: FakeLlm, config: BackendConfig):
     client = TestClient(App(config))
     model._outputs = [ui_call()]
@@ -134,13 +149,17 @@ def test_follow_up_keeps_conversation(model: FakeLlm, config: BackendConfig):
     assert "a signup form" in history and "USER_ACTION" in history
 
 
-def test_model_failure_ends_with_run_error(model: FakeLlm, config: BackendConfig):
+@pytest.mark.parametrize(
+    "message",
+    ["Blocked by gateway", "<html><head><title>Blocked by gateway</title></head></html>"],
+)
+def test_model_failure_is_reported_by_adapter(model: FakeLlm, config: BackendConfig, message: str):
     client = TestClient(App(config))
-    model._outputs = [RuntimeError("Blocked by gateway")]
+    model._outputs = [RuntimeError(message)]
     events = run(client, [user("a form")])
 
-    assert [e["type"] for e in events] == ["RUN_STARTED", "RUN_ERROR"]
-    assert "Blocked by gateway" in events[-1]["message"]
+    assert [e["type"] for e in events] == ["RUN_STARTED", "RUN_ERROR", "RUN_FINISHED"]
+    assert message in events[1]["message"]
 
     model._outputs = [ui_call()]
     assert run(client, [user("a form")], "run-2")[-1]["type"] == "RUN_FINISHED"
@@ -194,14 +213,3 @@ def test_env_config_and_secret_masking(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.delenv("LLM")
     with pytest.raises(ValidationError, match="llm"):
         BackendConfig(_env_file=None)
-
-
-def test_html_error_page_is_shortened_to_its_title():
-    from a2ui_agent_app.api._ui_agent import _short_error
-
-    message = "litellm.APIError: AzureException APIError - \n<!DOCTYPE html><html><head><title>Blocked by Cloudflare Gateway</title></head></html>"
-    assert _short_error(message) == (
-        "litellm.APIError: AzureException APIError - the endpoint returned "
-        "'Blocked by Cloudflare Gateway' instead of an LLM response (network/proxy issue)."
-    )
-    assert _short_error("plain error") == "plain error"

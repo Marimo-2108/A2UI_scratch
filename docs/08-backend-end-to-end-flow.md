@@ -20,8 +20,6 @@ FastAPI App                     CORS, health endpoint, the rest of the app
   ▼
 ag_ui_adk endpoint              parses AG-UI input and streams AG-UI events
   ▼
-_UiAgUiAgent                    forwards events and cleans up terminal errors
-  ▼
 ADKAgent / Google ADK Runner    session history and agent execution
   ▼
 UiAgent                         prompt + A2UI tool + catalog
@@ -54,7 +52,6 @@ is A2UI JSON carried in the result of an agent tool call; it is not a separate H
 | `async def` | `async function` |
 | `async for item in stream` | `for await (const item of stream)` |
 | `async def ...: yield item` | An async generator, like `async function*` |
-| `async with aclosing(stream)` | A `try/finally` that guarantees an async iterator is closed |
 | `dict[str, Any]` | A type hint for an object with string keys and arbitrary values |
 | `str \| None` | A string or `None` (roughly `string | null`) |
 | `**mapping` | Spread a mapping into keyword arguments, similar to `fn(...args)` or object spread |
@@ -126,18 +123,6 @@ config = BackendConfig()
 variables and converts values to declared Python types. An actual environment variable takes
 precedence over the `.env` value.
 
-If configured, the process injects the operating system's certificate store into Python's TLS
-stack:
-
-```python
-if config.use_system_truststore:
-    import truststore
-    truststore.inject_into_ssl()
-```
-
-This is useful in environments with a corporate certificate authority. It does not turn off
-certificate verification; it changes which trusted certificates Python can use.
-
 Next, startup creates the app:
 
 ```python
@@ -198,7 +183,6 @@ Important fields:
 | `agent_host` | `AGENT_HOST`, default `localhost` | Server bind host. |
 | `agent_port` | `AGENT_PORT`, default `10010` | TCP port for uvicorn. |
 | `web_origin_regex` | Default `http://localhost:\d+` | Browser origins allowed by CORS middleware. |
-| `use_system_truststore` | `USE_SYSTEM_TRUSTSTORE`, default `True` | Whether to use the OS certificate store. |
 
 The nested model type lives in [`agents/_config.py`](../Backend/src/a2ui_agent_app/agents/_config.py):
 
@@ -361,13 +345,12 @@ summarize the tool output.
 The helper `register_ui_agent(ui_agent, app)` wraps the ADK agent with `ag_ui_adk`:
 
 ```python
-ag_ui_agent = _UiAgUiAgent(
+ag_ui_agent = ADKAgent(
     adk_agent=ui_agent,
     app_name="a2ui_agent_app",
     user_id="a2ui-client",
     session_timeout_seconds=3600,
     use_in_memory_services=True,
-    run_config_factory=lambda _input: RunConfig(streaming_mode=StreamingMode.NONE),
 )
 add_adk_fastapi_endpoint(app, ag_ui_agent, path="/")
 ```
@@ -383,41 +366,12 @@ The adapter keeps conversation sessions in memory. A conversation is associated 
 hour of inactivity. A server restart loses these sessions because no persistent database is
 configured.
 
-`StreamingMode.NONE` disables token-by-token streaming from the model. The HTTP response is
-still a stream of AG-UI events. This distinction matters: LiteLLM's model streaming has produced
-empty replies for some proxy error responses, while a non-streaming request produces a useful
-exception.
+The app uses `ADKAgent` directly, with the adapter's default run configuration. It does not
+override model streaming or modify error messages. The HTTP response streams AG-UI events.
 
 `add_adk_fastapi_endpoint` registers the AG-UI endpoint at `POST /` and any other endpoints
 provided by the installed `ag_ui_adk` version. The app explicitly registers `/health`; see the
 library's installed version for adapter-specific auxiliary routes.
-
-### 8.1 Why there is an `_UiAgUiAgent` wrapper
-
-The wrapper overrides `run`, an async generator of AG-UI events:
-
-```python
-async with aclosing(super().run(input)) as events:
-    async for event in events:
-        if event.type == EventType.RUN_ERROR:
-            yield event.model_copy(update={"message": _short_error(event.message)})
-            return
-        yield event
-```
-
-Most events pass through unchanged. On `RUN_ERROR`, the wrapper optionally shortens the message
-and ends the stream. The AG-UI adapter may otherwise emit a `RUN_FINISHED` after `RUN_ERROR`;
-the frontend treats a terminal error as the end of the run, so an event after it can hide the
-original useful error.
-
-`aclosing` guarantees the wrapped async generator is closed in the same task, including when an
-error ends the stream or the client disconnects. That ensures ADK's tracing context is cleaned up
-in the context where it was created. It also addresses the earlier
-“Failed to detach context” cleanup error.
-
-`_short_error` is narrowly for proxy/firewall failures. If an exception contains an HTML page, it
-extracts the page title (for example, `Blocked by Cloudflare Gateway`) instead of sending the
-entire HTML document through the UI. Plain error messages are returned unchanged.
 
 ## 9. One request, from browser to rendered UI
 
@@ -503,8 +457,10 @@ STATE_SNAPSHOT
 RUN_FINISHED
 ```
 
-Not every run contains every event. For example, an Azure failure ends in `RUN_ERROR`, and the
-UI tool call produces tool-call events. These are Server-Sent Events (SSE), typically delivered
+Not every run contains every event. For example, an Azure failure produces `RUN_ERROR`, and the
+UI tool call produces tool-call events. The adapter may emit `RUN_FINISHED` after `RUN_ERROR`;
+the AG-UI client rejects that sequence and may display a protocol error instead of the original
+provider error. These are Server-Sent Events (SSE), typically delivered
 as `data: <JSON>\n\n` records while the HTTP response remains open.
 
 ### Step 9: the browser validates and renders
@@ -528,7 +484,6 @@ instead.
 | A2UI JSON can be parsed and matches the catalog/protocol | A2UI `SendA2uiToClientToolset` | Stops unknown components or malformed UI from reaching the renderer. |
 | Tool errors are returned to the model | ADK tool loop | Gives the model an opportunity to correct its output instead of displaying broken UI. |
 | A2UI tool result matches the frontend schema | `Frontend/src/agui/client.ts` | Defense in depth before messages are given to the renderer. |
-| HTML proxy error pages are shortened | `_short_error` in `api/_ui_agent.py` | Keeps an HTML block page from flooding the UI instead of showing the actual reason. |
 
 The backend does not implement a separate authentication check. CORS only affects browser
 behavior and does not prevent non-browser clients from making requests.
@@ -541,7 +496,7 @@ behavior and does not prevent non-browser clients from making requests.
 | Missing or invalid catalog file | Startup stops and includes the catalog path in the error. |
 | Port already in use | Uvicorn reports a bind error; another process is already listening there. |
 | Malformed AG-UI request | The endpoint rejects it before calling the model. |
-| Azure returns a provider error | The AG-UI stream ends with `RUN_ERROR`; HTML proxy pages are shortened. |
+| Azure returns a provider error | The adapter emits `RUN_ERROR` with its original message. A following `RUN_FINISHED` may cause a client protocol error. |
 | A2UI tool validation fails | The model receives the validation error and can try to repair its tool call. |
 | Backend restarts | In-memory session history is lost; start a new conversation. |
 | Follow-up occurs within a live session | ADK can use stored thread history to continue the conversation. |

@@ -46,7 +46,7 @@ tool call as separate choices; ADK reads only the first, so the UI is silently d
    and the turn ends.
 5. `ag_ui_adk` streams AG-UI events: `RUN_STARTED`, `TEXT_MESSAGE_*`, `TOOL_CALL_*`,
    `TOOL_CALL_RESULT` (the tool result, which the browser renders), `RUN_FINISHED`.
-   Any failure ends with `RUN_ERROR` and nothing after it.
+   Model failures produce `RUN_ERROR`; the adapter may follow it with `RUN_FINISHED`.
 
 Button clicks arrive as normal user messages: `USER_ACTION {...}`.
 History lives in memory per `threadId` and is lost when the server restarts.
@@ -57,6 +57,7 @@ The catalog is fixed on the backend. After changing the frontend catalog, regene
 ## Errors
 
 - Bad or missing `.env` values: `uv run a2ui-agent` exits with a message naming the field.
-- LLM failures (bad key, wrong deployment, network): the run ends with `RUN_ERROR` and the UI shows it.
-- `... returned 'Blocked by Cloudflare Gateway' ...`: the company network blocks the Azure endpoint.
+- LLM failures (bad key, wrong deployment, network): the adapter emits `RUN_ERROR` with the original
+  message. A following `RUN_FINISHED` can cause the AG-UI client to show a protocol error instead.
+- `Blocked by Cloudflare Gateway` in an error or HTML response: the company network blocks the Azure endpoint.
   This is not a code problem; ask IT to approve the endpoint.

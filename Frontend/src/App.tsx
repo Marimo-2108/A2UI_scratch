@@ -97,7 +97,7 @@ export default function App() {
               <span className="muted">{busy ? 'Responding...' : 'Assistant'}</span>
             </div>
             {chat.length
-              ? <pre className="agent-text">{chat.join('\n')}</pre>
+              ? <pre className="agent-text">{chat.map((message) => message.text).join('\n')}</pre>
               : <p className="agent-placeholder">A little context from your agent will show up here.</p>}
           </section>
         </div>

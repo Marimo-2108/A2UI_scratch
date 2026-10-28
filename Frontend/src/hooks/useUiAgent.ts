@@ -26,7 +26,7 @@ export function useUiAgent() {
   const [busy, setBusy] = useState(false);
   const [trace, setTrace] = useState<TraceRow[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
-  const [chat, setChat] = useState<string[]>([]);
+  const [chat, setChat] = useState<{ id: string; text: string }[]>([]);
   const [surfaces, setSurfaces] = useState<SurfaceModel<ReactCatalogComponent>[]>([]);
   const [hasConversation, setHasConversation] = useState(false);
   const client = useRef<UiAgentClient | null>(null);
@@ -71,8 +71,13 @@ export function useUiAgent() {
           const messages = a2uiMessagesOf(event);
           push('in', describe(event, messages), event);
           if (event.type === EventType.TEXT_MESSAGE_CONTENT) {
-            const { delta } = TextMessageContentEventSchema.parse(event);
-            setChat((chunks) => [...chunks, delta]);
+            const { messageId, delta } = TextMessageContentEventSchema.parse(event);
+            setChat((messages) => {
+              const last = messages.at(-1);
+              return last?.id === messageId
+                ? [...messages.slice(0, -1), { id: messageId, text: last.text + delta }]
+                : [...messages, { id: messageId, text: delta }];
+            });
           }
           for (const message of messages) {
             // A restarted agent may try to recreate a surface that is already on screen.

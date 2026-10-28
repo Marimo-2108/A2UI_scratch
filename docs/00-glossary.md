@@ -52,7 +52,6 @@ A2UI is the order slip format they pass back and forth.
 | **Thinking level** | How long the model reasons before answering. Lower = faster. LOW is ~5-12s here, default ~43s, same result. |
 | **Token** | A chunk of text the model reads or writes (~4 characters). Cost and speed scale with tokens. |
 | **503 / 429** | Server busy / too many requests. Temporary; we retry with backoff. |
-| **truststore / certificate store** | Makes Python trust the same HTTPS certificates as Windows. Needed on networks that re-sign traffic. |
 
 ## Added in Milestone 5 (custom components)
 | Term | Plain meaning |

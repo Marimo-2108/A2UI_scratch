@@ -13,11 +13,7 @@ from ._config import BackendConfig
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s: %(message)s")
     try:
-        config = BackendConfig()  # type: ignore[call-arg]  # values come from .env
-        if config.use_system_truststore:
-            import truststore
-
-            truststore.inject_into_ssl()
+        config = BackendConfig()
         app = App(config)
     except (ValidationError, RuntimeError) as e:
         sys.exit(f"Backend config error (check Backend/.env, see .env.example):\n{e}")

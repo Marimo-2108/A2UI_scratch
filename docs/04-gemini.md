@@ -41,7 +41,6 @@ is the safety net between a probabilistic model and your UI. Example from the pr
 | Protocol version | SDK + web lib validate `"version": "v0.9"`; passing `v0.9.1` to `create_processor` raises. Spec doc is ahead of the libraries. | Whole stack uses `v0.9`; extension URI `.../a2ui/v0.9` |
 | MIME type | SDK labels v0.9 parts `application/json+a2ui` (old name) | use SDK `create_a2ui_part`; web accepts both |
 | SDK on PyPI | `a2ui-agent-sdk` 0.8.0 on PyPI predates `A2uiGenerator`/`processor` that the docs describe | install both packages from the public GitHub repo, **pinned to a commit** (git dependency in `Backend/pyproject.toml`). Needs access to github.com; no local clone needed. |
-| TLS | `CERTIFICATE_VERIFY_FAILED: self-signed certificate in chain` for google domains only | `truststore` -> Python uses the OS cert store. Verification stays ON. |
 | Transient 503 | "model is currently experiencing high demand" (varies per model, per hour) | `HttpRetryOptions` backoff (429/5xx), and pick a model that is serving |
 | Latency | default ~43s, MEDIUM ~24s, **LOW ~5-12s**, same valid UI. `MINIMAL` is rejected by 3.8-flash. | `GEMINI_THINKING_LEVEL=LOW` default (`bench_thinking.py` reproduces the numbers) |
 | Prompt size | ~10,180 tokens every request | later: prune the catalog to the components we need |
@@ -54,7 +53,7 @@ is the safety net between a probabilistic model and your UI. Example from the pr
 
 ## Files
 (Original Milestone 4 layout; see "Addendum: Google ADK" below for where these live now.)
-- `Backend/config.py`        all settings from env / `.env` (+ truststore)
+- `Backend/config.py`        all settings from env / `.env`
 - `Backend/gemini_brain.py`  prompt, Gemini call, validate + retry loop, per-context memory
 - `Backend/executor.py`      one flow for both brains; negotiation -> brain -> status-updates
 - `Backend/try_agent.py`     CLI client; `Backend/bench_thinking.py` latency benchmark
